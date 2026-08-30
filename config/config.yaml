@@ -64,6 +64,11 @@ ref:
 # -- Containers -- #
 containers:
   # Reuse the demuxafy image that snp_demux uses — it carries cellsnp-lite,
-  # popscle, bcftools, samtools AND the souporcell toolchain (minimap2 2.7,
-  # vartrix 1.1.3, renamer.py/retag.py under /opt/souporcell). No network pull.
+  # popscle, bcftools, samtools AND the souporcell remap tools (minimap2 2.7,
+  # renamer.py/retag.py under /opt/souporcell). No network pull.
   demuxafy: resources/Demuxafy.sif
+  # souporcell VARTRIX runs here, NOT in Demuxafy — Demuxafy's bundled vartrix
+  # panics intermittently, which is exactly why snp_demux pins this image.
+  # Pre-pull to a local .sif (e.g. resources/souporcell_2.5.sif) to avoid a
+  # compute-node network pull.
+  souporcell: docker://cumulusprod/souporcell:2.5

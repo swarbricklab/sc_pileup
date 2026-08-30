@@ -99,7 +99,10 @@ rule souporcell_vartrix:
     log:
         logs / "souporcell/{platform}/{capture_id}/vartrix.log",
     container:
-        config["containers"]["demuxafy"]
+        # NB: cumulusprod/souporcell:2.5, NOT Demuxafy — Demuxafy's bundled
+        # vartrix panics intermittently (this is why snp_demux pins souporcell
+        # to the same image). remap/covered use the local Demuxafy tools (fine).
+        config["containers"]["souporcell"]
     shell:
         # Keep ref/alt matrices WITH their barcodes + variant VCF (the indices
         # that make them usable) — fixes snp_demux issue #35's orphaned matrices.
