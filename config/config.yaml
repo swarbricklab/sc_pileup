@@ -1,0 +1,52 @@
+# sc_pileup — configuration template
+#
+# The pileup stage is genotype-FREE: it tallies every barcode at every site in
+# `sites_vcf`, irrespective of donor. Donor subsetting / assignment happens
+# downstream (snp_demux, cardelino, Track B). So this stage needs only a BAM, a
+# barcode list, a platform, and a site VCF per capture.
+
+# -- Inputs -- #
+deps:
+  # One row per capture: capture_id, platform, bam, barcodes  (see config/captures.csv)
+  captures: config/captures.csv
+  # The sites to pile up. Swap this per purpose:
+  #   * germline common-SNP panel  -> feeds vireo/demuxlet/freemuxlet (demux)
+  #   * per-donor / merged somatic VCF -> feeds Track A / cardelino
+  # Must be bgzipped + indexed (.csi or .tbi), same genome build as the BAMs (GRCh38).
+  sites_vcf: /path/to/sites.vcf.gz
+
+# -- Outputs -- #
+outs:
+  root: results
+  logs: logs
+
+# -- Which pileup engines to run -- #
+# cellsnp : cellSNP-lite MEX matrices (AD/DP/OTH + base.vcf.gz + samples.tsv).
+#           Primary, reusable artifact; feeds vireo, Track B, cardelino.
+# popscle : popscle dsc-pileup (plp/cel/var/umi). Feeds demuxlet + freemuxlet.
+#           Short-read only for now (dsc-pileup assumes 10x-style short reads).
+engines: [cellsnp, popscle]
+
+# -- Parameters -- #
+params:
+  cellsnp_lite:
+    # For a germline common-SNP demux panel use minMAF ~0.01, minCOUNT ~10
+    # (matching snp_demux). For a targeted somatic/Track-A pileup use minMAF 0,
+    # minCOUNT 1 (keep every site, however rare).
+    minMAF: 0.0
+    minCOUNT: 1
+    # Per-platform extra cellsnp-lite flags. Defaults assume 10x CB/UB tags.
+    # The `long` row is a documented placeholder to be tuned against real PacBio
+    # single-cell BAMs (splice-aware; UMI semantics may differ; see docs).
+    platform_args:
+      short: ""
+      long: ""
+  # popscle applicability: which platforms it runs on.
+  popscle:
+    platforms: [short]
+
+# -- Containers -- #
+containers:
+  # Reuse the demuxafy image that snp_demux uses (cellsnp-lite, popscle,
+  # bcftools, samtools all live inside it).
+  demuxafy: resources/Demuxafy.sif

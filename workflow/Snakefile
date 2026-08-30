@@ -1,0 +1,15 @@
+from pathlib import Path
+import pandas as pd
+
+# Path roots (globals used across rule files)
+out_dir = Path(config["outs"]["root"])
+logs = Path(config["outs"]["logs"])
+
+include: "rules/common.smk"
+include: "rules/cellsnp.smk"
+include: "rules/popscle.smk"
+
+
+rule all:
+    input:
+        pileup_targets(),
