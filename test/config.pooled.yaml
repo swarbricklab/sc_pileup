@@ -1,5 +1,4 @@
-# Smoke-test config: one real short-read capture from bcarc_chromium, germline
-# panel as sites. For DAG validation / a single-capture run.
+# Pooled-capture smoke config (Neomet_Pool028a, 6 donors) — all three engines.
 deps:
   captures: test/captures.pooled.csv
   sites_vcf: /scratch/a56/jr9959/bcarc_chromium/data/snp/vcf/donor_keyed.vcf.gz
@@ -8,7 +7,7 @@ outs:
   root: results
   logs: logs
 
-engines: [cellsnp, popscle]
+engines: [cellsnp, popscle, souporcell]
 
 params:
   cellsnp_lite:
@@ -19,6 +18,13 @@ params:
       long: ""
   popscle:
     platforms: [short]
+  souporcell:
+    min_cov: 20
+    platforms: [short]
+
+ref:
+  souporcell:
+    genome_fasta: /scratch/a56/jr9959/bcarc_chromium/resources/transcriptomes/refdata-gex-GRCh38-2020-A/fasta/genome.fa
 
 containers:
   demuxafy: /scratch/a56/jr9959/bcarc_chromium/resources/Demuxafy.sif

@@ -18,6 +18,18 @@ set-resources:
     threads: 32
     mem: "32GB"
     runtime: 1440
+  souporcell_remap:
+    threads: 32
+    mem: "128GB"
+    runtime: 1440
+  souporcell_covered_variants:
+    threads: 1
+    mem: "16GB"
+    runtime: 360
+  souporcell_vartrix:
+    threads: 16
+    mem: "32GB"
+    runtime: 720
   split_bam_by_chromosome:
     threads: 1
     mem: "2GB"

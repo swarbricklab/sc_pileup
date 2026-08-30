@@ -8,6 +8,7 @@ logs = Path(config["outs"]["logs"])
 include: "rules/common.smk"
 include: "rules/cellsnp.smk"
 include: "rules/popscle.smk"
+include: "rules/souporcell.smk"
 
 
 rule all:

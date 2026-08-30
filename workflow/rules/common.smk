@@ -14,6 +14,7 @@ if _bad:
 
 engines = config.get("engines", ["cellsnp"])
 _popscle_platforms = set(config["params"]["popscle"]["platforms"])
+_souporcell_platforms = set(config["params"].get("souporcell", {}).get("platforms", []))
 
 
 def lookup(field):
@@ -49,4 +50,7 @@ def pileup_targets():
             base = out_dir / "popscle" / plat / capture_id
             targets.append(str(base / "pileup.plp.gz"))
             targets.append(str(base / "pileup.umi.gz"))
+        if "souporcell" in engines and plat in _souporcell_platforms:
+            targets.append(str(out_dir / "souporcell" / plat / capture_id / "ref.mtx"))
+            targets.append(str(out_dir / "souporcell" / plat / capture_id / "alt.mtx"))
     return targets
