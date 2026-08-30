@@ -1,0 +1,3 @@
+capture_id,platform,bam,barcodes
+EXAMPLE_short,short,/path/to/EXAMPLE/assigned_alignments.bam,/path/to/EXAMPLE/barcodes.tsv.gz
+EXAMPLE_long,long,/path/to/EXAMPLE_lr/aligned.tagged.bam,/path/to/EXAMPLE_lr/barcodes.tsv.gz
