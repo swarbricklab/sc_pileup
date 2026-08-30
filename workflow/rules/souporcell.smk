@@ -26,8 +26,12 @@ rule souporcell_remap:
         barcodes=lookup("barcodes"),
         fasta=config["ref"]["souporcell"]["genome_fasta"],
     output:
-        bam=temp(out_dir / "souporcell/{platform}/{capture_id}/remap/minimap_tagged_sorted.bam"),
-        bai=temp(out_dir / "souporcell/{platform}/{capture_id}/remap/minimap_tagged_sorted.bam.bai"),
+        # NOT temp(): the remapped BAM is a reusable asset (somatic Track-A
+        # pileup on the remapped bam, re-vartrix, QC) and the remap is the
+        # expensive step (~6 h). ~24 GB/capture — revisit a keep/discard config
+        # flag if kept cohort-wide.
+        bam=out_dir / "souporcell/{platform}/{capture_id}/remap/minimap_tagged_sorted.bam",
+        bai=out_dir / "souporcell/{platform}/{capture_id}/remap/minimap_tagged_sorted.bam.bai",
     params:
         soup=SOUPORCELL_DIR,
     log:
