@@ -1,0 +1,45 @@
+# Workflow profile (snakemake 7.x)
+verbose: False
+keep-going: True
+rerun-incomplete: True
+latency-wait: 30
+retries: 2
+
+use-conda: True
+conda-frontend: mamba
+
+set-resources:
+  cellsnp_pileup:
+    threads: 32
+    mem: "32GB"
+    runtime: 1440
+  split_bam_by_chromosome:
+    threads: 1
+    mem: "2GB"
+    runtime: 20
+  split_vcf_by_chromosome:
+    threads: 1
+    mem: "2GB"
+    runtime: 10
+  dsc_pileup_by_chromosome:
+    threads: 1
+    mem: "64GB"
+    runtime: 240
+  merge_cel:
+    threads: 1
+    mem: "4GB"
+  merge_var:
+    threads: 1
+    mem: "4GB"
+  wrangle_plp_by_chromosome:
+    threads: 1
+    mem: "4GB"
+  merge_plp:
+    threads: 1
+    mem: "4GB"
+  wrangle_umi_by_chromosome:
+    threads: 1
+    mem: "4GB"
+  merge_umi:
+    threads: 1
+    mem: "4GB"
