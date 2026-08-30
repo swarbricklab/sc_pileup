@@ -136,11 +136,20 @@ rule merge_plp:
     output:
         plp=out_dir / "popscle/{platform}/{capture_id}/pileup.plp.gz",
     container:
-        "docker://johnyaku/csvkit:1.1.1"
+        config["containers"]["demuxafy"]
     log:
         logs / "popscle/{platform}/{capture_id}/merge_plp.log",
     shell:
-        "csvstack --tabs {input.plp} | csvformat -T | gzip -n > {output.plp}"
+        # Stack the per-chromosome wrangled PLPs (identical tab-separated schema)
+        # keeping a single header. Replaces snp_demux's csvkit dependency (an
+        # external docker image) with a header-dedup concat in the local
+        # container — equivalent because every chunk shares the wrangle schema.
+        r"""
+        first=1
+        for f in {input.plp}; do
+            if [ "$first" -eq 1 ]; then cat "$f"; first=0; else tail -n +2 "$f"; fi
+        done | gzip -n > {output.plp} 2> {log}
+        """
 
 
 rule wrangle_umi_by_chromosome:
