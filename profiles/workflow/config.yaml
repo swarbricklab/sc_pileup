@@ -8,6 +8,11 @@ retries: 2
 use-conda: True
 conda-frontend: mamba
 
+# Per-rule threads live here (not in the rule). cellSNP-lite reads it as
+# {resources.threads} in its shell; everything else defaults to 1 thread.
+# NB: set as a `threads` *resource* (not snakemake's `set-threads:`) because in
+# snakemake 7.32.4 set-threads does not propagate to the {threads} placeholder
+# for a rule that declares no threads directive; the resources route does.
 set-resources:
   cellsnp_pileup:
     threads: 32

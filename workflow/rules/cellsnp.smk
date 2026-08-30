@@ -29,7 +29,6 @@ rule cellsnp_pileup:
         minMAF=config["params"]["cellsnp_lite"]["minMAF"],
         minCOUNT=config["params"]["cellsnp_lite"]["minCOUNT"],
         extra=cellsnp_extra,
-    threads: 32
     log:
         logs / "cellsnp/{platform}/{capture_id}.log",
     container:
@@ -41,7 +40,7 @@ rule cellsnp_pileup:
             --regionsVCF {input.vcf} \
             --barcodeFile {input.barcodes} \
             --outDir $outdir \
-            --nproc {threads} \
+            --nproc {resources.threads} \
             --minMAF {params.minMAF} \
             --minCOUNT {params.minCOUNT} \
             --gzip {params.extra} \
