@@ -21,11 +21,15 @@ outs:
   logs: logs
 
 # -- Which pileup engines to run -- #
-# cellsnp : cellSNP-lite MEX matrices (AD/DP/OTH + base.vcf.gz + samples.tsv).
-#           Primary, reusable artifact; feeds vireo, Track B, cardelino.
-# popscle : popscle dsc-pileup (plp/cel/var/umi). Feeds demuxlet + freemuxlet.
-#           Short-read only for now (dsc-pileup assumes 10x-style short reads).
-engines: [cellsnp, popscle]
+# cellsnp    : cellSNP-lite MEX matrices (AD/DP/OTH + base.vcf.gz + samples.tsv).
+#              Primary, reusable artifact; feeds vireo, Track B, cardelino.
+# popscle    : popscle dsc-pileup (plp/cel/var/umi). Feeds demuxlet + freemuxlet.
+#              Short-read only for now (dsc-pileup assumes 10x-style short reads).
+# souporcell : minimap2 remap + vartrix -> ref.mtx/alt.mtx (+barcodes,+variants).
+#              The expensive, deterministic half of souporcell; snp_demux resumes
+#              from the matrices for clustering/troublet/consensus. See
+#              docs/souporcell_split.md. Short-read only for now.
+engines: [cellsnp, popscle, souporcell]
 
 # -- Parameters -- #
 params:
@@ -44,9 +48,22 @@ params:
   # popscle applicability: which platforms it runs on.
   popscle:
     platforms: [short]
+  # souporcell prep (remap + vartrix). vartrix counts at the covered subset of
+  # sites_vcf (genotype-free); min_cov = min read depth for a site to be kept
+  # (souporcell's min_ref+min_alt, default 20).
+  souporcell:
+    min_cov: 20
+    platforms: [short]
+
+# -- Reference dependencies -- #
+ref:
+  souporcell:
+    # Genome FASTA (+ .fai) for minimap2 remap and vartrix. Same build as BAMs.
+    genome_fasta: /path/to/refdata-gex-GRCh38-2020-A/fasta/genome.fa
 
 # -- Containers -- #
 containers:
-  # Reuse the demuxafy image that snp_demux uses (cellsnp-lite, popscle,
-  # bcftools, samtools all live inside it).
+  # Reuse the demuxafy image that snp_demux uses — it carries cellsnp-lite,
+  # popscle, bcftools, samtools AND the souporcell toolchain (minimap2 2.7,
+  # vartrix 1.1.3, renamer.py/retag.py under /opt/souporcell). No network pull.
   demuxafy: resources/Demuxafy.sif
