@@ -12,10 +12,12 @@
 #   --out FILE            output bgzipped VCF (indexed)
 #   --source VCF:DONORS   repeatable; per-source donor subset (','-separated)
 #   [--regions FILE]      restrict every source to these sites first (BED/tab/VCF)
-#   [--fill-ref]          set missing GTs to 0/0 after merge (bcftools +setGT).
-#                         Reasonable for WGS (no call = hom-ref); for microarray
-#                         donors it assumes unmeasured = hom-ref, so keep the
-#                         merge restricted to sites both sources genotype.
+#   [--fill-ref]          set each source's OWN missing GTs to 0/0 BEFORE merging
+#                         (bcftools +setGT; a no-call within a source = hom-ref,
+#                         valid for WGS). Cross-source missing (a donor's source
+#                         lacks a site) stays ./. -- it is NOT invented as hom-ref
+#                         (which would falsely assert e.g. a microarray donor is
+#                         hom-ref at sites the array never measured).
 #
 # The mechanism is generic; the donor->source POLICY (which donor from which
 # VCF) is the caller's, passed as --source args. Requires bcftools (+ setGT
@@ -40,24 +42,23 @@ for s in "${srcs[@]}"; do
   p="$tmpd/src$i.vcf.gz"
   args=(view -s "$donors" --force-samples)
   [ -n "$regions" ] && args+=(-T "$regions")
-  bcftools "${args[@]}" "$vcf" -Oz -o "$p"
+  # --fill-ref is applied PER SOURCE (a no-call within a source = hom-ref, valid
+  # for WGS). Cross-source missing (a donor's source lacks a site entirely) is
+  # left ./. after the merge -- NOT invented as hom-ref, which would falsely
+  # assert e.g. a microarray donor is hom-ref at sites the array never measured.
+  if [ "$fill" = 1 ]; then
+    bcftools "${args[@]}" "$vcf" -Ou | bcftools +setGT -Oz -o "$p" -- -t . -n 0
+  else
+    bcftools "${args[@]}" "$vcf" -Oz -o "$p"
+  fi
   bcftools index "$p"
   parts+=("$p"); i=$((i+1))
 done
 
 if [ ${#parts[@]} -eq 1 ]; then
-  merged="${parts[0]}"
+  bcftools view "${parts[0]}" -Oz -o "$out"
 else
-  merged="$tmpd/merged.vcf.gz"
-  bcftools merge "${parts[@]}" -Oz -o "$merged"
-  bcftools index "$merged"
-fi
-
-if [ "$fill" = 1 ]; then
-  # missing GT -> hom-ref. setGT is a standard plugin; fail loudly if absent.
-  bcftools +setGT "$merged" -Oz -o "$out" -- -t . -n 0
-else
-  bcftools view "$merged" -Oz -o "$out"
+  bcftools merge "${parts[@]}" -Oz -o "$out"
 fi
 bcftools index -f "$out"
 echo "merged $(bcftools query -l "$out" | wc -l) donors, $(bcftools view -H "$out" | wc -l) sites -> $out"
