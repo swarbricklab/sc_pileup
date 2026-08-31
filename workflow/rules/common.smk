@@ -12,7 +12,12 @@ if _bad:
     raise ValueError("captures.csv has unknown platform(s) " + str(_bad)
                      + "; expected " + str(_VALID_PLATFORMS))
 
+_VALID_ENGINES = {"cellsnp", "popscle", "souporcell"}
 engines = config.get("engines", ["cellsnp"])
+_bad_engines = set(engines) - _VALID_ENGINES
+if _bad_engines:
+    raise ValueError(f"config.engines has unknown engine(s) {_bad_engines}; "
+                     f"valid engines: {sorted(_VALID_ENGINES)}")
 _popscle_platforms = set(config["params"]["popscle"]["platforms"])
 _souporcell_platforms = set(config["params"].get("souporcell", {}).get("platforms", []))
 
