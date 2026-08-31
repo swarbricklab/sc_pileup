@@ -41,6 +41,18 @@ outs:
 # which lean on freemuxlet. Default keeps popscle pending team sign-off.
 engines: [cellsnp, popscle, souporcell]
 
+# -- Optional per-pool informative panel -- #
+# When `informative_filter: true`, engines do NOT pile at `sites_vcf` directly.
+# Instead, per capture, `sites_vcf` (which must then be a cohort donor-genotype
+# VCF) is subset to the pool's donors (captures.csv `donors` column, ';'-separated
+# sample names matching sites_vcf) and filtered to sites polymorphic among them
+# (bcftools view -c 1:minor). See rules/panel.smk. The resulting
+# results/panel/<capture>/informative.vcf.gz is ALSO the file snp_demux should
+# point deps.vcf at -> the pileup sites and the demux genotypes stay identical by
+# construction. Leave FALSE for somatic / Track-A pileups (no donor subsetting).
+panel:
+  informative_filter: false
+
 # -- Parameters -- #
 params:
   cellsnp_lite:
