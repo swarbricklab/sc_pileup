@@ -18,7 +18,7 @@ rule cellsnp_pileup:
     input:
         bam=lookup("bam"),
         barcodes=lookup("barcodes"),
-        vcf=config["deps"]["sites_vcf"],
+        vcf=sites_vcf_input,
     output:
         base=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.base.vcf.gz",
         samples=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.samples.tsv",

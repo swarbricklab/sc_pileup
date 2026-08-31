@@ -59,3 +59,32 @@ def pileup_targets():
             targets.append(str(out_dir / "souporcell" / plat / capture_id / "ref.mtx"))
             targets.append(str(out_dir / "souporcell" / plat / capture_id / "alt.mtx"))
     return targets
+
+
+# --- Optional per-pool informative panel ------------------------------------
+# When config.panel.informative_filter is true, engines pile at a per-capture
+# panel (sites_vcf subset to the pool's donors, kept only where polymorphic among
+# them; see rules/panel.smk) instead of the raw sites_vcf. Correct for demux;
+# leave FALSE for somatic / Track-A pileups (no donor subsetting wanted).
+_informative = bool(config.get("panel", {}).get("informative_filter", False))
+
+
+def pool_donors(wildcards):
+    """';'-separated donor sample names for this capture (for bcftools -s)."""
+    if "donors" not in captures.columns:
+        raise ValueError("config.panel.informative_filter is set but captures.csv "
+                         "has no 'donors' column")
+    val = captures.loc[wildcards.capture_id, "donors"]
+    if pd.isna(val) or not str(val).strip():
+        raise ValueError("config.panel.informative_filter is set but capture '"
+                         + str(wildcards.capture_id) + "' has an empty 'donors' value")
+    return str(val).strip()
+
+
+def sites_vcf_input(wildcards):
+    """VCF the engines pile at: the per-pool informative panel when
+    informative_filter is on, else the global sites_vcf. Built with pathlib to
+    match rule informative_panel's output string (see f-string note above)."""
+    if _informative:
+        return str(out_dir / "panel" / wildcards.capture_id / "informative.vcf.gz")
+    return config["deps"]["sites_vcf"]
