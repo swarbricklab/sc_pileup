@@ -52,6 +52,7 @@ params:
   # sites_vcf (genotype-free); min_cov = min read depth for a site to be kept
   # (souporcell's min_ref+min_alt, default 20).
   souporcell:
+    skip_remap: true   # vartrix on the original BAM (remap validated a no-op)
     min_cov: 20
     platforms: [short]
 

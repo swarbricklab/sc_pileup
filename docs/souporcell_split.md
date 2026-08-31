@@ -102,10 +102,37 @@ consensus.py -c clusters.tsv -a alt.mtx -r ref.mtx --soup_out ambient.txt \
 Everything downstream (`cluster_genotypes.vcf`, vireosnp cluster→donor, Demuxafy
 consensus) is unchanged. Only the boundary moves.
 
-## Optional future optimisation: reuse cellSNP instead of a separate vartrix
+## skip_remap is the DEFAULT (validated no-op)
 
-With `--skip_remap`, souporcell-prep collapses to "vartrix at panel sites on the
-original BAM" — conceptually what cellSNP already produces (alt = AD, ref =
-DP−AD). One could then feed clustering from cellSNP matrices (format-convert to
-MatrixMarket) and run *no* separate souporcell pileup. Trade-off: loses the
-remap-based ref-bias correction. Benchmark before adopting; v1 keeps remap.
+`params.souporcell.skip_remap: true` (default) runs **vartrix on the original
+cellranger BAM** and never runs the minimap2 remap. The remap's only purpose was
+reference-bias correction; we tested whether it matters and it doesn't:
+
+**Germline** (Neomet_Pool028a, common-SNP panel): cellSNP-on-original vs
+vartrix-on-remapped allele fractions ~identical (median ΔAF 0, Pearson 0.993);
+the ~3% discordance is concentrated in ~200 known-hard sites (HLA/MHC etc.) and
+remap *lowers* alt (cleans STAR mismaps, not ref-bias recovery).
+
+**Somatic** — the clean, same-tool, higher-stakes test (**vartrix** original vs
+remapped at the somatic panel):
+
+| metric | original (skip_remap) | remapped |
+|---|---|---|
+| somatic sites with ≥1 ALT | 336 | 307 |
+| total somatic ALT reads | 5,422 | 5,369 (−1.0%) |
+| sites gained / lost by remap | — | +14 / −43 |
+| per-cell malignant (≥2) calls | 486 | 518, **98.7% concordant** |
+
+So the ~6 h + ~285 GB/capture remap changes somatic detection by ~1% and, if
+anything, *loses* a few sites (it drops minimap2's MAPQ-0 reads). It is not worth
+running by default.
+
+Set `skip_remap: false` to run the full remap (renamer → minimap2 → retag → sort
+→ covered-variants/vartrix on the remapped BAM) — kept as an opt-in for any
+future case that needs the ref-bias correction (e.g. HLA-focused work).
+
+NB: cellSNP does **not** work on souporcell's retagged/remapped BAM (counts 0),
+so cellSNP always runs on the original BAM regardless — the remap only ever fed
+vartrix. A further optimisation (feed clustering directly from the cellSNP
+AD/DP, format-converted, and drop the separate vartrix) is possible but
+unbenchmarked.

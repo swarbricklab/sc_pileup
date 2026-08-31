@@ -1,0 +1,28 @@
+# Track-A somatic pileup: cellSNP-lite on the ORIGINAL cellranger BAM at the
+# merged somatic SNVs of the pool's 4 WGS donors. minMAF 0 / minCOUNT 1 to keep
+# every somatic site with >=1 read.
+deps:
+  captures: test/captures.somatic_remap.csv
+  sites_vcf: /scratch/a56/jr9959/sc_pileup/resources/somatic/merged_somatic.vcf.gz
+outs:
+  root: results
+  logs: logs
+engines: [cellsnp]
+params:
+  cellsnp_lite:
+    minMAF: 0.0
+    minCOUNT: 1
+    platform_args:
+      short: ""
+      long: ""
+  popscle:
+    platforms: [short]
+  souporcell:
+    min_cov: 20
+    platforms: [short]
+ref:
+  souporcell:
+    genome_fasta: /scratch/a56/jr9959/bcarc_chromium/resources/transcriptomes/refdata-gex-GRCh38-2020-A/fasta/genome.fa
+containers:
+  demuxafy: /scratch/a56/jr9959/bcarc_chromium/resources/Demuxafy.sif
+  souporcell: /scratch/a56/jr9959/sc_pileup/resources/souporcell_2.5.sif
