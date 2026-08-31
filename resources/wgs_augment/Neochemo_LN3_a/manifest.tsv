@@ -1,0 +1,5 @@
+role	donor	source	path
+demux_panel	4703,4720,4797,4825,PBMC_Donor_6	microarray(imputed)	/scratch/a56/jr9959/bcarc_chromium/data/snp/vcf/donor_keyed.vcf.gz
+gap_fill	4758	WGS germline (L2501579)	/scratch/a56/jr9959/sc_pileup/resources/wgs_augment/Neochemo_LN3_a/4758.germline.vcf.gz
+pileup_bam	-	cellranger	/scratch/a56/jr9959/bcarc_chromium/data/cellranger/bam/count/captures/Neochemo_LN3_a/assigned_alignments.bam
+barcodes	-	cellranger	/scratch/a56/jr9959/bcarc_chromium/data/cellranger/count/filtered/Neochemo_LN3_a/barcodes.tsv.gz
