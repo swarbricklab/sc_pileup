@@ -15,9 +15,34 @@
 #
 # v1 is whole-BAM. minimap2 remap is not cleanly chromosome-splittable (reads
 # relocate genome-wide); the depth+vartrix half is, and is deferred to v1.1.
+#
+# skip_remap (DEFAULT true): vartrix counts on the ORIGINAL cellranger BAM
+# instead of the minimap2-remapped BAM. Validated to be a no-op: vartrix
+# original-vs-remapped at somatic sites differs by ~1% in total ALT reads and
+# 98.7% of per-cell malignant calls are unchanged, so the ~6 h + ~285 GB remap
+# buys nothing. Set skip_remap: false to run the full remap. See
+# docs/souporcell_split.md.
 
 # Location of renamer.py / retag.py inside Demuxafy.sif.
 SOUPORCELL_DIR = "/opt/souporcell"
+
+
+def _skip_remap():
+    return config["params"]["souporcell"].get("skip_remap", True)
+
+
+def souporcell_bam(wildcards):
+    """BAM that vartrix counts on: original cellranger BAM (skip_remap) or the
+    minimap2-remapped BAM (opt-in). When skip_remap, the remap rule is never
+    requested and so never runs."""
+    if _skip_remap():
+        return captures.loc[wildcards.capture_id, "bam"]
+    return str(out_dir / "souporcell" / wildcards.platform / wildcards.capture_id
+               / "remap/minimap_tagged_sorted.bam")
+
+
+def souporcell_bai(wildcards):
+    return souporcell_bam(wildcards) + ".bai"
 
 
 rule souporcell_remap:
@@ -61,8 +86,8 @@ rule souporcell_remap:
 
 rule souporcell_covered_variants:
     input:
-        bam=rules.souporcell_remap.output.bam,
-        bai=rules.souporcell_remap.output.bai,
+        bam=souporcell_bam,
+        bai=souporcell_bai,
         vcf=config["deps"]["sites_vcf"],
     output:
         vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/covered_variants.vcf"),
@@ -90,8 +115,8 @@ rule souporcell_covered_variants:
 
 rule souporcell_vartrix:
     input:
-        bam=rules.souporcell_remap.output.bam,
-        bai=rules.souporcell_remap.output.bai,
+        bam=souporcell_bam,
+        bai=souporcell_bai,
         vcf=rules.souporcell_covered_variants.output.vcf,
         barcodes=lookup("barcodes"),
         fasta=config["ref"]["souporcell"]["genome_fasta"],
