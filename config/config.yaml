@@ -29,6 +29,16 @@ outs:
 #              The expensive, deterministic half of souporcell; snp_demux resumes
 #              from the matrices for clustering/troublet/consensus. See
 #              docs/souporcell_split.md. Short-read only for now.
+#
+# Set this list to pick which engines run. Dropping an engine removes all its
+# jobs (Snakemake is pull-based). Unknown names are rejected.
+#
+# NB: `popscle` feeds demuxlet+freemuxlet, which is the single-threaded, up-to-
+# 24 h, job-exploding bottleneck. A cohort-wide eval (138 captures, 1.8M cells)
+# showed a vireo+souporcell consensus reproduces ~98.8% of demuxlet+freemuxlet
+# assignments (0.01% flips, +2.5% net gain), so `engines: [cellsnp, souporcell]`
+# is a strong option — EXCEPT for CD45-sorted/immune-enriched low-coverage pools,
+# which lean on freemuxlet. Default keeps popscle pending team sign-off.
 engines: [cellsnp, popscle, souporcell]
 
 # -- Parameters -- #
