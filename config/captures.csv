@@ -1,3 +1,4 @@
-capture_id,platform,bam,barcodes,donors
-EXAMPLE_short,short,/path/to/EXAMPLE/assigned_alignments.bam,/path/to/EXAMPLE/barcodes.tsv.gz,DONOR_A;DONOR_B;DONOR_C
-EXAMPLE_long,long,/path/to/EXAMPLE_lr/aligned.tagged.bam,/path/to/EXAMPLE_lr/barcodes.tsv.gz,
+capture_id,platform,bam,barcodes,donors,sites_vcf
+EXAMPLE_short,short,/path/to/EXAMPLE/assigned_alignments.bam,/path/to/EXAMPLE/barcodes.tsv.gz,DONOR_A;DONOR_B;DONOR_C,
+EXAMPLE_ext,short,/path/to/EXT/assigned_alignments.bam,/path/to/EXT/barcodes.tsv.gz,,/path/to/panel/EXAMPLE_ext/informative.vcf.gz
+EXAMPLE_long,long,/path/to/EXAMPLE_lr/aligned.tagged.bam,/path/to/EXAMPLE_lr/barcodes.tsv.gz,,

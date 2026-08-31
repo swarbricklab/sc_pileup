@@ -4,6 +4,8 @@ import pandas as pd
 # Path roots (globals used across rule files)
 out_dir = Path(config["outs"]["root"])
 logs = Path(config["outs"]["logs"])
+# Reusable, project-agnostic CLIs shipped with sc_pileup (NOT workflow rules).
+tools_dir = Path(workflow.basedir).parent / "tools"
 
 include: "rules/common.smk"
 include: "rules/panel.smk"
