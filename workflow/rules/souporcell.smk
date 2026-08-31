@@ -88,7 +88,7 @@ rule souporcell_covered_variants:
     input:
         bam=souporcell_bam,
         bai=souporcell_bai,
-        vcf=config["deps"]["sites_vcf"],
+        vcf=sites_vcf_input,
     output:
         vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/covered_variants.vcf"),
     params:
