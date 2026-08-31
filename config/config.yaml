@@ -41,17 +41,24 @@ outs:
 # which lean on freemuxlet. Default keeps popscle pending team sign-off.
 engines: [cellsnp, popscle, souporcell]
 
-# -- Optional per-pool informative panel -- #
-# When `informative_filter: true`, engines do NOT pile at `sites_vcf` directly.
-# Instead, per capture, `sites_vcf` (which must then be a cohort donor-genotype
-# VCF) is subset to the pool's donors (captures.csv `donors` column, ';'-separated
-# sample names matching sites_vcf) and filtered to sites polymorphic among them
-# (bcftools view -c 1:minor). See rules/panel.smk. The resulting
-# results/panel/<capture>/informative.vcf.gz is ALSO the file snp_demux should
-# point deps.vcf at -> the pileup sites and the demux genotypes stay identical by
-# construction. Leave FALSE for somatic / Track-A pileups (no donor subsetting).
+# -- Which VCF each capture piles at (3 modes) -- #
+# 1. Global: engines pile at `deps.sites_vcf` (below). Default; correct for a
+#    single shared panel or a somatic/Track-A VCF.
+# 2. Per-capture external panel: give captures.csv a `sites_vcf` column pointing
+#    at a pre-built per-pool panel (e.g. from a bcarc_chromium
+#    build_informative_panels stage). This is the production demux path.
+# 3. Build in-workflow (below): sc_pileup builds the per-pool panel itself via
+#    tools/build_informative_panel.sh -- a STANDALONE convenience. Needs a
+#    `donors` column in captures.csv. The same tool is what the orchestration
+#    stage calls in batch, so there is one implementation, two entry points.
 panel:
-  informative_filter: false
+  build_in_workflow: false   # mode 3: build per-pool panels here
+  # Optional common-SNP backbone (bgzipped+indexed VCF or BED/tab sites file) to
+  # intersect against -- harmonises WGS vs microarray-imputed donors onto
+  # identical sites. null = no common-SNP restriction. On for demux/Track-B, off
+  # for somatic/Track-A.
+  common_sites: null
+  informative: true          # drop sites not polymorphic among the pool (-c 1:minor)
 
 # -- Parameters -- #
 params:

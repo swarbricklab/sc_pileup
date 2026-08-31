@@ -61,30 +61,43 @@ def pileup_targets():
     return targets
 
 
-# --- Optional per-pool informative panel ------------------------------------
-# When config.panel.informative_filter is true, engines pile at a per-capture
-# panel (sites_vcf subset to the pool's donors, kept only where polymorphic among
-# them; see rules/panel.smk) instead of the raw sites_vcf. Correct for demux;
-# leave FALSE for somatic / Track-A pileups (no donor subsetting wanted).
-_informative = bool(config.get("panel", {}).get("informative_filter", False))
+# --- Which VCF each capture piles at ----------------------------------------
+# Three modes, resolved per capture by sites_vcf_input():
+#   1. panel.build_in_workflow: sc_pileup builds the per-pool panel itself via
+#      rule informative_panel (tools/build_informative_panel.sh) -> pile at it.
+#      Standalone convenience; needs a `donors` column in captures.csv.
+#   2. per-capture `sites_vcf` column in captures.csv: pile at that path. This is
+#      the production path -- an upstream orchestration stage (e.g. bcarc_chromium
+#      build_informative_panels) built the panels; we just consume them.
+#   3. else: the global deps.sites_vcf (one shared panel, or a somatic/Track-A VCF).
+_panel = config.get("panel", {})
+_panel_build = bool(_panel.get("build_in_workflow", False))
+_panel_common = (_panel.get("common_sites") or "").strip()
+_panel_informative = bool(_panel.get("informative", True))
+# Arg strings for the tool (module-level: avoid f-strings inside defs -- see note).
+panel_common_arg = ("--common-sites " + _panel_common) if _panel_common else ""
+panel_informative_arg = "--informative" if _panel_informative else ""
 
 
 def pool_donors(wildcards):
-    """';'-separated donor sample names for this capture (for bcftools -s)."""
+    """';'/','-separated donor sample names for this capture (for the tool's
+    --donors / bcftools -s). Only needed when panel.build_in_workflow is set."""
     if "donors" not in captures.columns:
-        raise ValueError("config.panel.informative_filter is set but captures.csv "
-                         "has no 'donors' column")
+        raise ValueError("panel.build_in_workflow is set but captures.csv has no "
+                         "'donors' column")
     val = captures.loc[wildcards.capture_id, "donors"]
     if pd.isna(val) or not str(val).strip():
-        raise ValueError("config.panel.informative_filter is set but capture '"
+        raise ValueError("panel.build_in_workflow is set but capture '"
                          + str(wildcards.capture_id) + "' has an empty 'donors' value")
     return str(val).strip()
 
 
 def sites_vcf_input(wildcards):
-    """VCF the engines pile at: the per-pool informative panel when
-    informative_filter is on, else the global sites_vcf. Built with pathlib to
-    match rule informative_panel's output string (see f-string note above)."""
-    if _informative:
+    """The VCF the engines pile at for this capture (see the 3 modes above)."""
+    if _panel_build:
         return str(out_dir / "panel" / wildcards.capture_id / "informative.vcf.gz")
+    if "sites_vcf" in captures.columns:
+        v = captures.loc[wildcards.capture_id, "sites_vcf"]
+        if pd.notna(v) and str(v).strip():
+            return str(v).strip()
     return config["deps"]["sites_vcf"]
