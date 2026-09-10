@@ -4,9 +4,9 @@ A small, reusable Snakemake workflow that turns single-cell BAMs into **per-cell
 REF/ALT count matrices** at a configurable set of sites. It factors the
 expensive, deterministic *pileup* out of the *assignment* step so that:
 
-- **genotype demux** (vireo / demuxlet / freemuxlet in `snp_demux`) can be
-  re-run and re-tuned cheaply, resuming from saved pileups instead of re-reading
-  BAMs;
+- **genotype demux** (vireo / demuxlet / freemuxlet / souporcell in `snp_demux`)
+  can be re-run and re-tuned cheaply, resuming from saved pileups instead of
+  re-reading BAMs;
 - the same matrices feed **malignant-cell / clonal** analyses — somatic-variant
   detection (Track A), allelic imbalance in CNV/LOH regions (Track B), and
   `cardelino` — when pointed at a somatic / CNV-region site VCF.
@@ -27,10 +27,11 @@ genotype wrangling lives here.
 
 ## Engines
 
-| engine | output | consumers | platforms |
-|---|---|---|---|
-| `cellsnp` | cellSNP-lite MEX: `cellSNP.base.vcf.gz`, `cellSNP.samples.tsv`, `cellSNP.tag.{AD,DP,OTH}.mtx` | vireo, Track B, cardelino | short, long* |
-| `popscle` | `dsc-pileup`: `pileup.{cel,var,plp,umi}.gz` | demuxlet **and** freemuxlet (shared) | short |
+| engine | tool | output | consumers | platforms |
+|---|---|---|---|---|
+| `cellsnp` | cellSNP-lite | MEX: `cellSNP.base.vcf.gz`, `cellSNP.samples.tsv`, `cellSNP.tag.{AD,DP,OTH}.mtx` | vireo, Track B, cardelino | short, long* |
+| `popscle` | popscle `dsc-pileup` | `pileup.{cel,var,plp,umi}.gz` | demuxlet **and** freemuxlet (shared) | short |
+| `souporcell` | minimap2 + vartrix | `ref.mtx`, `alt.mtx`, `variants.vcf` | souporcell clustering | short |
 
 Outputs are written under `results/<engine>/<platform>/<capture_id>/` so
 short- and long-read pileups of the same capture coexist and can be merged
@@ -42,15 +43,76 @@ this is the main reason the malignant-detection direction is worth pursuing. The
 `platform` dimension is wired through the config and output layout, but the
 long-read pileup parameters (splice-aware handling, UMI semantics, SNV-preferring
 site QC) are **placeholders to be tuned against real PacBio single-cell BAMs**
-(`params.cellsnp_lite.platform_args.long`). `popscle` is short-read only for now.
+(`params.cellsnp_lite.platform_args.long`). `popscle` and `souporcell` are
+short-read only for now.
 
-## Provenance
+## Tools
 
-The pileup rules are heavily plagiarised from
+Each engine wraps a well-established single-cell genotyping tool, all run inside
+the shared `Demuxafy.sif` image:
+
+1. **cellSNP-lite** — the `cellsnp` engine; per-cell REF/ALT/OTH pileup at the
+   site VCF. [docs](https://cellsnp-lite.readthedocs.io/) | [paper](https://doi.org/10.1093/bioinformatics/btab358) | [GitHub](https://github.com/single-cell-genetics/cellSNP-lite)
+2. **popscle** (`dsc-pileup`) — one shared pileup that feeds **both** demuxlet and
+   freemuxlet downstream. [demuxlet paper](https://www.nature.com/articles/nbt.4042) | [GitHub](https://github.com/statgen/popscle)
+3. **souporcell** — genotype-free clustering prep: [minimap2](https://github.com/lh3/minimap2)
+   remap (optional) then [vartrix](https://github.com/10XGenomics/vartrix) counts
+   → `ref.mtx` / `alt.mtx`. [paper](https://www.nature.com/articles/s41592-020-0820-1) | [GitHub](https://github.com/wheaton5/souporcell)
+
+Downstream these matrices are consumed by vireo / demuxlet / freemuxlet /
+souporcell in [`snp_demux`](https://github.com/swarbricklab/snp_demux).
+
+## Workflow
+
+All three engines start from the same inputs — a BAM + barcode list (per
+`captures.csv`) and a **site VCF** (either `deps.sites_vcf`, or a per-pool
+`informative.vcf.gz` built on the fly by the optional `informative_panel` rule).
+
+```mermaid
+flowchart TB
+    BAM["BAM + barcodes<br/><i>captures.csv</i>"]
+    VCF["site VCF<br/><i>deps.sites_vcf / informative_panel</i>"]
+
+    BAM --> CS["cellsnp_pileup<br/><i>cellSNP-lite</i>"]
+    VCF --> CS
+    CS --> O1["cellSNP.base.vcf.gz · samples.tsv<br/>tag.AD/DP/OTH.mtx<br/>→ vireo · cardelino · Track B"]
+
+    BAM --> SPL["split_bam / split_vcf<br/>by chromosome"]
+    VCF --> SPL
+    SPL --> DSC["dsc_pileup_by_chromosome<br/><i>popscle</i>"]
+    DSC --> MRG["merge_cel · merge_var<br/>wrangle+merge_plp · _umi"]
+    MRG --> O2["pileup.cel/var/plp/umi.gz<br/>→ demuxlet + freemuxlet"]
+
+    BAM --> RMP["souporcell_remap<br/><i>optional; skip_remap default</i>"]
+    RMP --> COV["souporcell_covered_variants"]
+    VCF --> COV
+    COV --> VT["souporcell_vartrix<br/><i>vartrix</i>"]
+    VT --> O3["ref.mtx · alt.mtx · variants.vcf<br/>→ souporcell clustering"]
+```
+
+With `skip_remap` (the default) the `souporcell_remap` minimap2 step is skipped
+and vartrix counts directly on the original cellranger BAM — validated to be a
+no-op for the covered-site matrices.
+
+## Contributions
+
+The pileup rules were factored out of, and are heavily indebted to,
 [`swarbricklab/snp_demux`](https://github.com/swarbricklab/snp_demux)
 (`rules/vireo.smk` cellSNP, `rules/demuxlet.smk`/`freemuxlet.smk` dsc-pileup,
 `rules/split.smk`, and `scripts/{merge_cel,merge_var,wrangle_plp,wrangle_umi}.py`),
-then reviewed and generalised. Key changes: outputs are no longer `temp()`; the
+then reviewed and generalised. The souporcell prep rules are lifted from
+[`souporcell_pipeline.py`](https://github.com/wheaton5/souporcell) (renamer →
+minimap2 → retag → covered-variant depth filter → vartrix).
+
+`snp_demux` is itself a simplification and refactoring of the
+[demuxafy](https://github.com/swarbricklab/demuxafy) workflow developed by
+[Daniel Roden](https://github.com/dlroden) and
+[Beata Kiedik](https://github.com/BeataKiedik), which in turn wraps the
+[Demuxafy](https://demultiplexing-doublet-detecting-docs.readthedocs.io/en/latest/index.html)
+package and tools developed by [Drew Neavin](https://github.com/drneavin) at the
+Powell Lab.
+
+Key changes vs the `snp_demux` originals: outputs are no longer `temp()`; the
 site VCF is generic; the redundant demuxlet/freemuxlet pileups are merged into
 one; genotype-free (no `--sm-list`); platform-aware paths. See the header
 comments in each rule file.
@@ -69,8 +131,3 @@ comments in each rule file.
    ./run.sh -n          # dry run
    ./run.sh -c 32       # local
    ```
-
-## Status
-
-Experimental. Intended to be installed as a git submodule under
-`bcarc_chromium/modules/sc_pileup` on an experimental branch once tested.
