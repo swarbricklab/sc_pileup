@@ -128,7 +128,7 @@ Candidates investigated (GRCh38):
 
 | candidate | ~#SNPs | threshold | notes |
 |---|---|---|---|
-| **souporcell `common_variants_grch38.vcf`** (IGSR 1000G native GRCh38) | ~10.4M | MAF≳0.02 | **recommended default**; native GRCh38 (no liftover); souporcell's built-in default so one file harmonises cellSNP/vireo/souporcell/popscle; **already on disk** at `***REMOVED***` (offline-usable) |
+| **souporcell `common_variants_grch38.vcf`** (IGSR 1000G native GRCh38) | ~10.4M | MAF≳0.02 | **recommended default**; native GRCh38 (no liftover); souporcell's built-in default so one file harmonises cellSNP/vireo/souporcell/popscle; distributed with [souporcell](https://github.com/wheaton5/souporcell) (pre-stage to a local path for offline/compute-node use) |
 | cellSNP/vireo `genome1K.phase3.SNP_AF5e2.chr1toX.hg38.vcf.gz` | ~7.4M | MAF≥0.05 | 2nd choice; the tool authors' documented list; hg19→hg38 liftover; 92 MB download ([SourceForge](https://sourceforge.net/projects/cellsnp/files/SNPlist/)) |
 | gnomAD v3.1/v4 genomes, self-filtered | — | choose | best AFs, native GRCh38, but roll-your-own + heavy |
 | dbSNP "common" | ~14M | MAF≥0.01 | **deprecated** — NCBI retired the common subset after build 151; avoid |

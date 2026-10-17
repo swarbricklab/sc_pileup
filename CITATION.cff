@@ -1,0 +1,88 @@
+# The Zenodo concept DOI is added under `identifiers:` once the first GitHub
+# release mints it. Version and date-released are finalised at release time.
+cff-version: 1.2.0
+message: "If you use this workflow, please cite it using the metadata below."
+version: "1.0.0"
+date-released: "2026-10-17"
+title: "sc_pileup: a reusable single-cell pileup stage for per-cell REF/ALT counts at a site VCF"
+abstract: >-
+  A small, reusable Snakemake workflow that turns single-cell BAMs into per-cell
+  REF/ALT count matrices at a configurable set of sites. It factors the
+  expensive, deterministic pileup out of the downstream assignment step so that
+  genotype demultiplexing (vireo / demuxlet / freemuxlet / souporcell, in
+  snp_demux) can be re-run cheaply from saved pileups, and so the same matrices
+  feed malignant-cell / clonal analyses (somatic-variant detection, allelic
+  imbalance in CNV/LOH regions, cardelino) when pointed at a somatic / CNV-region
+  site VCF. It wraps cellSNP-lite, popscle dsc-pileup, and souporcell (minimap2 +
+  vartrix) behind one genotype-free interface, and runs standalone or as a git
+  submodule within a DVC-tracked dataset.
+type: software
+authors:
+  - given-names: John
+    family-names: Reeves
+    affiliation: "Garvan Institute of Medical Research"
+    alias: johnyaku
+    orcid: "https://orcid.org/0000-0001-7368-7489"
+  - given-names: Daniel
+    family-names: Roden
+    affiliation: "Garvan Institute of Medical Research"
+    alias: dlroden
+    orcid: "https://orcid.org/0000-0003-2393-5805"
+  - given-names: Beata
+    family-names: Kiedik
+    affiliation: "Garvan Institute of Medical Research"
+    alias: BeataKiedik
+  - given-names: Victor
+    family-names: Liu
+    affiliation: "Garvan Institute of Medical Research"
+    alias: VictorrLiu
+    orcid: "https://orcid.org/0009-0008-7628-7825"
+  - given-names: Alexander
+    family-names: Swarbrick
+    affiliation: "Garvan Institute of Medical Research"
+    orcid: "https://orcid.org/0000-0002-3051-5676"
+repository-code: "https://github.com/swarbricklab/sc_pileup"
+url: "https://github.com/swarbricklab/sc_pileup"
+license: MIT
+keywords:
+  - single-cell
+  - scRNA-seq
+  - genotyping
+  - pileup
+  - cellSNP-lite
+  - popscle
+  - souporcell
+  - demultiplexing
+  - Snakemake
+references:
+  - type: software
+    title: "cellSNP-lite"
+    authors:
+      - name: "Xianjie Huang, Yuanhua Huang, and contributors"
+    url: "https://github.com/single-cell-genetics/cellSNP-lite"
+    doi: "10.1093/bioinformatics/btab358"
+    notes: "The cellsnp engine: per-cell REF/ALT/OTH pileup at the site VCF."
+  - type: software
+    title: "popscle (demuxlet / freemuxlet)"
+    authors:
+      - name: "Hyun Min Kang and contributors"
+    url: "https://github.com/statgen/popscle"
+    notes: "The popscle engine: dsc-pileup feeding demuxlet and freemuxlet."
+  - type: software
+    title: "souporcell"
+    authors:
+      - name: "Haynes Heaton and contributors"
+    url: "https://github.com/wheaton5/souporcell"
+    notes: >-
+      The souporcell engine: minimap2 remap (optional) + vartrix counts. The prep
+      rules are adapted from souporcell_pipeline.py.
+  - type: software
+    title: "snp_demux / Demuxafy"
+    authors:
+      - name: "Drew Neavin"
+      - name: "Daniel Roden"
+      - name: "Beata Kiedik"
+    url: "https://github.com/swarbricklab/snp_demux"
+    notes: >-
+      The pileup rules were factored out of swarbricklab/snp_demux, which wraps the
+      Demuxafy package and tools developed by Drew Neavin at the Powell Lab.

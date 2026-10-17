@@ -2,6 +2,10 @@ results/
 logs/
 .snakemake/
 resources/*.sif
+# Never track patient-derived data under resources/ (these dirs were purged from
+# git history in 2026-10; keep them out going forward).
+resources/somatic/
+resources/wgs_augment/
 __pycache__/
 *.pyc
 .DS_Store
