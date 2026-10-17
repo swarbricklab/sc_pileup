@@ -58,6 +58,9 @@ def pileup_targets():
         if "souporcell" in engines and plat in _souporcell_platforms:
             targets.append(str(out_dir / "souporcell" / plat / capture_id / "ref.mtx"))
             targets.append(str(out_dir / "souporcell" / plat / capture_id / "alt.mtx"))
+    # Additive QC summary (goal-1: reads the outputs above, changes nothing).
+    if config.get("qc", True):
+        targets.append(str(out_dir / "qc/cohort_metrics.csv"))
     return targets
 
 
