@@ -106,7 +106,10 @@ rule souporcell_covered_variants:
         samtools depth {input.bam} \
           | awk -v c={params.min_cov} '{{ if ($3 >= c && $3 < 100000) print $1"\t"$2"\t"($2+1)"\t"$3 }}' \
           | bedtools merge -i - > $d/depth_merged.bed 2> {log}
-        ( bcftools view -h {input.vcf}; \
+        # strip bcftools' own `##bcftools_viewCommand=...; Date=...` header line so
+        # variants.vcf is byte-reproducible (the Date varies per run); records are
+        # unchanged.
+        ( bcftools view -h {input.vcf} | grep -v '^##bcftools_'; \
           bedtools intersect -wa -a {input.vcf} -b $d/depth_merged.bed ) \
           > {output.vcf} 2>> {log}
         rm -f $d/depth_merged.bed

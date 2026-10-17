@@ -175,4 +175,6 @@ rule merge_umi:
     log:
         logs / "popscle/{platform}/{capture_id}/merge_umi.log",
     shell:
-        "zcat {input.umi} | gzip > {output.umi}"
+        # -n: strip the gzip mtime so pileup.umi.gz is byte-reproducible (matches
+        # merge_plp; keeps this stage's output stable in a DVC superpipeline).
+        "zcat {input.umi} | gzip -n > {output.umi}"
