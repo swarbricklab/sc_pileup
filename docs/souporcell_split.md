@@ -108,7 +108,7 @@ consensus) is unchanged. Only the boundary moves.
 cellranger BAM** and never runs the minimap2 remap. The remap's only purpose was
 reference-bias correction; we tested whether it matters and it doesn't:
 
-**Germline** (Neomet_Pool028a, common-SNP panel): cellSNP-on-original vs
+**Germline** (a pooled multi-donor capture, common-SNP panel): cellSNP-on-original vs
 vartrix-on-remapped allele fractions ~identical (median ΔAF 0, Pearson 0.993);
 the ~3% discordance is concentrated in ~200 known-hard sites (HLA/MHC etc.) and
 remap *lowers* alt (cleans STAR mismaps, not ref-bias recovery).
