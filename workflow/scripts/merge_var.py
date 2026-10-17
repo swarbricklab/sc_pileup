@@ -44,9 +44,11 @@ snp_map = snp_map.reset_index()
 
 # Write var file with correct index
 merged_var = merged_var.drop('original_SNP_ID', axis=1)
-merged_var.to_csv(output_file, sep='\t', index=True, compression='gzip')
+merged_var.to_csv(output_file, sep='\t', index=True,
+                  compression={'method': 'gzip', 'mtime': 0})  # mtime=0: byte-reproducible
 
 # Write SNP map
-snp_map.to_csv(snp_map_file, sep='\t', index=False, compression='gzip')
+snp_map.to_csv(snp_map_file, sep='\t', index=False,
+               compression={'method': 'gzip', 'mtime': 0})
 
 logging.info("Successfully saved merged var file and SNP map")

@@ -45,7 +45,8 @@ merged_df = merged_df.reset_index()
 merged_df.insert(0, '#DROPLET_ID', range(len(merged_df)))  # new unique IDs
 
 # Save merged CEL file
-merged_df.to_csv(output_file, sep='\t', index=False, compression='gzip')
+merged_df.to_csv(output_file, sep='\t', index=False,
+                 compression={'method': 'gzip', 'mtime': 0})  # mtime=0: byte-reproducible
 logging.info(f"Saved merged CEL file to {output_file}")
 
 # Build sample map
@@ -54,5 +55,6 @@ for chrom, mapping in per_chrom_droplet_ids.items():
     sample_map[chrom] = mapping['#DROPLET_ID']
 
 sample_map = sample_map.reset_index()
-sample_map.to_csv(sample_map_file, sep='\t', index=False, compression='gzip')
+sample_map.to_csv(sample_map_file, sep='\t', index=False,
+                  compression={'method': 'gzip', 'mtime': 0})
 logging.info(f"Saved full sample map to {sample_map_file}")
