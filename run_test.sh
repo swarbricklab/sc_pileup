@@ -16,7 +16,12 @@
 #   CORES=8 ./run_test.sh      # more local cores
 set -euo pipefail
 
-eval "$(conda shell.bash hook)"
+# Make conda available even on a bare (non-login) compute shell, e.g. under
+# `qxub exec` in CI, where `conda` is not on PATH. Override CONDA_PROFILE if your
+# install lives elsewhere.
+if ! command -v conda >/dev/null 2>&1; then
+    source "${CONDA_PROFILE:-/g/data/a56/conda/miniconda/etc/profile.d/conda.sh}"
+fi
 conda activate snakemake_7.32.4
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

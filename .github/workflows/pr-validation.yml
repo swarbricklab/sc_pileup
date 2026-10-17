@@ -58,10 +58,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # run_test.sh activates the snakemake conda env and loads singularity
-          # itself; source conda first so `conda` is on PATH on the compute node.
-          qxub exec -v --queue normal --mem 32GB --cpus 4 --execdir "$CLONE" \
-            -- bash -lc 'source /g/data/a56/conda/miniconda/etc/profile.d/conda.sh && ./run_test.sh --check'
+          # --mod singularity loads singularity on the compute node; run_test.sh
+          # sources conda itself (CONDA_PROFILE default) and activates snakemake.
+          qxub exec -v --queue normal --mem 32GB --cpus 4 --mod singularity --execdir "$CLONE" \
+            -- ./run_test.sh --check
 
   cleanup:
     needs: [clone, reproduce]
