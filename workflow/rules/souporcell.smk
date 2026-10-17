@@ -9,9 +9,9 @@
 # (--known_genotypes) stay in snp_demux.
 #
 # Commands are lifted verbatim from souporcell_pipeline.py (renamer -> minimap2
-# -> retag -> covered-variant depth filter -> vartrix); pinned to the toolchain
-# in Demuxafy.sif (minimap2 2.7, vartrix 1.1.3), whose prep is equivalent to
-# cumulusprod/souporcell:2.5.
+# -> retag -> covered-variant depth filter -> vartrix); the whole engine runs in
+# cumulusprod/souporcell:2.5, which carries minimap2, renamer/retag, samtools,
+# bcftools, bedtools and vartrix.
 #
 # v1 is whole-BAM. minimap2 remap is not cleanly chromosome-splittable (reads
 # relocate genome-wide); the depth+vartrix half is, and is deferred to v1.1.
@@ -23,7 +23,7 @@
 # buys nothing. Set skip_remap: false to run the full remap. See
 # docs/souporcell_split.md.
 
-# Location of renamer.py / retag.py inside Demuxafy.sif.
+# Location of renamer.py / retag.py inside the souporcell image.
 SOUPORCELL_DIR = "/opt/souporcell"
 
 
@@ -62,7 +62,7 @@ rule souporcell_remap:
     log:
         logs / "souporcell/{platform}/{capture_id}/remap.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["souporcell"]
     shell:
         r"""
         d=$(dirname {output.bam}); mkdir -p $d
@@ -96,7 +96,7 @@ rule souporcell_covered_variants:
     log:
         logs / "souporcell/{platform}/{capture_id}/covered_variants.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["souporcell"]
     shell:
         # Keep only sites with read depth >= min_cov on the remapped bam, then
         # subset sites_vcf to those covered regions (mirrors souporcell). awk
@@ -128,9 +128,9 @@ rule souporcell_vartrix:
     log:
         logs / "souporcell/{platform}/{capture_id}/vartrix.log",
     container:
-        # NB: cumulusprod/souporcell:2.5, NOT Demuxafy — Demuxafy's bundled
-        # vartrix panics intermittently (this is why snp_demux pins souporcell
-        # to the same image). remap/covered use the local Demuxafy tools (fine).
+        # vartrix (and the whole souporcell engine) runs in this image —
+        # Demuxafy's bundled vartrix panics intermittently, which is why
+        # snp_demux pins cumulusprod/souporcell:2.5.
         config["containers"]["souporcell"]
     shell:
         # Keep ref/alt matrices WITH their barcodes + variant VCF (the indices

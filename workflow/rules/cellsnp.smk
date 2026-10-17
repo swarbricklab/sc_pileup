@@ -32,7 +32,7 @@ rule cellsnp_pileup:
     log:
         logs / "cellsnp/{platform}/{capture_id}.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["cellsnp"]
     shell:
         """
         outdir=$(dirname {output.base})
