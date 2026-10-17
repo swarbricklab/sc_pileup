@@ -1,2 +1,0 @@
-capture_id,platform,bam,barcodes
-Neomet_Pool028a_somatic_remap,short,/scratch/a56/jr9959/sc_pileup/results/souporcell/short/Neomet_Pool028a/remap/minimap_tagged_sorted.bam,/scratch/a56/jr9959/bcarc_chromium/data/cellranger/count/filtered/Neomet_Pool028a/barcodes.tsv.gz
