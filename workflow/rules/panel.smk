@@ -34,7 +34,7 @@ rule informative_panel:
     log:
         logs / "panel/{capture_id}.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["bcftools"]
     shell:
         """
         bash {input.tool} \

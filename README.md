@@ -48,8 +48,10 @@ short-read only for now.
 
 ## Tools
 
-Each engine wraps a well-established single-cell genotyping tool, all run inside
-the shared `Demuxafy.sif` image:
+Each engine wraps a well-established single-cell genotyping tool, each run in its
+own focused container (public biocontainers / the souporcell image; see
+`config.yaml` `containers:`), pinned to the versions the original `Demuxafy.sif`
+shipped:
 
 1. **cellSNP-lite** — the `cellsnp` engine; per-cell REF/ALT/OTH pileup at the
    site VCF. [docs](https://cellsnp-lite.readthedocs.io/) | [paper](https://doi.org/10.1093/bioinformatics/btab358) | [GitHub](https://github.com/single-cell-genetics/cellSNP-lite)
@@ -124,8 +126,9 @@ comments in each rule file.
    `minCOUNT` for your purpose (germline panel: `0.01`/`10`; targeted somatic:
    `0`/`1`).
 2. Fill `config/captures.csv`: `capture_id,platform,bam,barcodes`.
-3. Provide the container at `resources/Demuxafy.sif` (same image `snp_demux`
-   uses).
+3. Containers are pulled automatically from the `containers:` refs in
+   `config.yaml` (public biocontainers + the souporcell image). Run with
+   `--use-singularity`; `run.sh` already does on NCI.
 4. Dry run, then run:
    ```bash
    ./run.sh -n          # dry run

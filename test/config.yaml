@@ -10,9 +10,9 @@
 # The pileup is genotype-FREE, so the site VCF is just a set of positions — no
 # donor genotypes are needed (those live downstream in snp_demux).
 #
-# The two singularity images and the genome FASTA are NCI-resident inputs that the
-# CI environment provides (too large to track per-repo); the paths below are the
-# shared a56 locations.
+# The per-tool biocontainers are pulled once into the singularity prefix; the
+# souporcell image and the genome FASTA are NCI-resident inputs the CI environment
+# provides (too large to track per-repo), at the shared a56 locations below.
 deps:
   captures: test/captures.csv
   sites_vcf: test/data/sites.vcf.gz
@@ -48,5 +48,9 @@ ref:
     genome_fasta: /scratch/a56/***REMOVED***/bcarc_chromium/resources/transcriptomes/refdata-gex-GRCh38-2020-A/fasta/genome.fa
 
 containers:
-  demuxafy: /scratch/a56/***REMOVED***/bcarc_chromium/resources/Demuxafy.sif
+  cellsnp:    docker://quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3
+  popscle:    docker://ghcr.io/swarbricklab/sc_pileup-popscle:da70fc78
+  samtools:   docker://quay.io/biocontainers/samtools:1.15--h1170115_1
+  bcftools:   docker://quay.io/biocontainers/bcftools:1.13--h3a49de5_0
+  # reuse the already-staged local .sif to avoid a 1.5 GB re-pull in CI
   souporcell: /g/data/a56/software/singularity/images/souporcell_2.5.sif

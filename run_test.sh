@@ -43,6 +43,7 @@ snakemake \
     --workflow-profile "$HERE/profiles/workflow" \
     --use-singularity \
     --singularity-args "--bind /g/data/a56,/scratch/a56" \
+    --singularity-prefix "${SINGULARITY_PREFIX:-/g/data/a56/software/singularity/images}" \
     --cores "${CORES:-4}" \
     ${sm_args[@]+"${sm_args[@]}"}
 

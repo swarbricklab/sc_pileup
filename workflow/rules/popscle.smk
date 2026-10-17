@@ -32,7 +32,7 @@ rule split_bam_by_chromosome:
     log:
         logs / "popscle/{platform}/{capture_id}/split_bam_{chrom}.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["samtools"]
     shell:
         """
         samtools view -b {input.bam} {wildcards.chrom} > {output.bam} 2> {log}
@@ -49,7 +49,7 @@ rule split_vcf_by_chromosome:
     log:
         logs / "popscle/{platform}/{capture_id}/split_vcf_{chrom}.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["bcftools"]
     shell:
         """
         bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output.vcf} 2> {log}
@@ -70,7 +70,7 @@ rule dsc_pileup_by_chromosome:
     log:
         logs / "popscle/{platform}/{capture_id}/dsc_pileup_{chrom}.log",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["popscle"]
     shell:
         """
         cel={output.cel}
@@ -136,7 +136,7 @@ rule merge_plp:
     output:
         plp=out_dir / "popscle/{platform}/{capture_id}/pileup.plp.gz",
     container:
-        config["containers"]["demuxafy"]
+        config["containers"]["bcftools"]
     log:
         logs / "popscle/{platform}/{capture_id}/merge_plp.log",
     shell:

@@ -92,13 +92,18 @@ ref:
     genome_fasta: /path/to/refdata-gex-GRCh38-2020-A/fasta/genome.fa
 
 # -- Containers -- #
+# Focused per-tool images (public biocontainers / Docker Hub) replacing the
+# monolithic Demuxafy.sif. Versions match what Demuxafy.sif shipped so results are
+# unchanged. Snakemake pulls docker:// images once into its singularity prefix.
 containers:
-  # Reuse the demuxafy image that snp_demux uses — it carries cellsnp-lite,
-  # popscle, bcftools, samtools AND the souporcell remap tools (minimap2 2.7,
-  # renamer.py/retag.py under /opt/souporcell). No network pull.
-  demuxafy: resources/Demuxafy.sif
-  # souporcell VARTRIX runs here, NOT in Demuxafy — Demuxafy's bundled vartrix
-  # panics intermittently, which is exactly why snp_demux pins this image.
-  # Pre-pull to a local .sif (e.g. resources/souporcell_2.5.sif) to avoid a
-  # compute-node network pull.
+  cellsnp:    docker://quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3
+  # built from statgen/popscle @ da70fc78 (the commit Demuxafy.sif shipped); the
+  # public 0.1beta biocontainer emits a different pileup.umi format. See containers/.
+  popscle:    docker://ghcr.io/swarbricklab/sc_pileup-popscle:da70fc78
+  samtools:   docker://quay.io/biocontainers/samtools:1.15--h1170115_1
+  bcftools:   docker://quay.io/biocontainers/bcftools:1.13--h3a49de5_0
+  # The whole souporcell engine (minimap2 remap + renamer/retag, samtools/bcftools
+  # covered-variant filter, and vartrix) runs in souporcell's own image — it
+  # carries all of them, and its vartrix is the one snp_demux pins (Demuxafy's
+  # bundled vartrix panics intermittently).
   souporcell: docker://cumulusprod/souporcell:2.5
