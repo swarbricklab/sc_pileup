@@ -131,3 +131,25 @@ comments in each rule file.
    ./run.sh -n          # dry run
    ./run.sh -c 32       # local
    ```
+
+## Testing
+
+A small, self-contained reproducibility test exercises **all three engines** on a
+public fixture:
+
+- `test/data/` (DVC-tracked) — a tiny_pbmc cellranger BAM (from
+  [`chromium-preprocessing`](https://github.com/swarbricklab/chromium-preprocessing)'s
+  public test data) subset to two windows, plus a site VCF subset from the
+  souporcell IGSR/1000G GRCh38 common-SNP panel. Regenerate with
+  [`test/make_test_fixtures.sh`](test/make_test_fixtures.sh), which documents the
+  provenance. The pileup is genotype-free, so the VCF is just positions.
+- `test/golden/` (DVC-tracked) — the expected pileup outputs.
+- Run it:
+  ```bash
+  dvc pull                # fetch test/data + test/golden
+  ./run_test.sh --check   # run all three engines, content-compare to the golden
+  ```
+  [`test/compare_golden.py`](test/compare_golden.py) compares *content*
+  (decompressing `.gz`, ignoring VCF headers) so gzip mtimes don't cause false
+  diffs. CI (`.github/workflows/pr-validation.yml`) runs exactly this on the NCI
+  qxub-runner for every PR.
