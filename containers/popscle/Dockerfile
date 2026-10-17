@@ -10,8 +10,11 @@
 # biocontainers / the souporcell image — see config.yaml `containers:`.
 #
 # Mirrors Demuxafy's bundled /opt/popscle/Dockerfile (statgen/popscle + a
-# from-source htslib), pinned for reproducibility.
-FROM ubuntu:22.04
+# from-source htslib), pinned for reproducibility. ubuntu:20.04 (gcc 9) is
+# deliberate: popscle @ da70fc78 omits an `#include <limits>` that gcc >= 11
+# (ubuntu 22.04) rejects ("'numeric_limits' is not a member of 'std'"); gcc 9
+# includes it transitively and builds the commit as Demuxafy's toolchain did.
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ARG HTSLIB_TAG=1.16
