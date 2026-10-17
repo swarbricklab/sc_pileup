@@ -42,24 +42,26 @@ jobs:
     runs-on: qxub-runner
     permissions:
       pull-requests: write
+    env:
+      # Same path scheme qxub-checkout / qxub-check-repro use (nci-project a56,
+      # pr-/run- workspace). Reconstructed here rather than passed as an output.
+      CLONE: /scratch/a56/${{ secrets.USER_NAME }}/ci/${{ github.event.repository.name }}/pr-${{ github.event.pull_request.number }}/run-${{ github.run_id }}
     steps:
       - name: Pull fixture + golden
         shell: bash
         run: |
           set -euo pipefail
-          CLONE="${{ needs.clone.outputs.clone-dir }}"
           qxub exec -v --queue copyq --mod dt --execdir "$CLONE" \
-            -- dt pull test/data.dvc test/golden.dvc
+            -- dt pull --network -v
 
       - name: Run all three engines and compare to golden
         shell: bash
         run: |
           set -euo pipefail
-          CLONE="${{ needs.clone.outputs.clone-dir }}"
           # run_test.sh activates the snakemake conda env and loads singularity
           # itself; source conda first so `conda` is on PATH on the compute node.
           qxub exec -v --queue normal --mem 32GB --cpus 4 --execdir "$CLONE" \
-            -- bash -lc 'source /g/data/a56/conda/miniconda/etc/profile.d/conda.sh && ./run_test.sh --check --retries 0'
+            -- bash -lc 'source /g/data/a56/conda/miniconda/etc/profile.d/conda.sh && ./run_test.sh --check'
 
   cleanup:
     needs: [clone, reproduce]
