@@ -28,6 +28,8 @@ rule cellsnp_pileup:
     params:
         minMAF=config["params"]["cellsnp_lite"]["minMAF"],
         minCOUNT=config["params"]["cellsnp_lite"]["minCOUNT"],
+        min_mapq=config["params"]["cellsnp_lite"]["min_mapq"],
+        min_len=config["params"]["cellsnp_lite"]["min_len"],
         extra=cellsnp_extra,
     log:
         logs / "cellsnp/{platform}/{capture_id}.log",
@@ -43,6 +45,8 @@ rule cellsnp_pileup:
             --nproc {resources.threads} \
             --minMAF {params.minMAF} \
             --minCOUNT {params.minCOUNT} \
+            --minMAPQ {params.min_mapq} \
+            --minLEN {params.min_len} \
             --gzip {params.extra} \
             > {log} 2>&1
         """
