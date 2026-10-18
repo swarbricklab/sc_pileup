@@ -67,6 +67,12 @@ rule dsc_pileup_by_chromosome:
         plp=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.plp.gz"),
         umi=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.umi.gz"),
         var=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.var.gz"),
+    params:
+        min_mq=config["params"]["popscle"]["min_mq"],
+        min_bq=config["params"]["popscle"]["min_bq"],
+        cap_bq=config["params"]["popscle"]["cap_bq"],
+        excl_flag=config["params"]["popscle"]["excl_flag"],
+        extra=config["params"]["popscle"]["extra"],
     log:
         logs / "popscle/{platform}/{capture_id}/dsc_pileup_{chrom}.log",
     container:
@@ -79,6 +85,10 @@ rule dsc_pileup_by_chromosome:
             --sam {input.bam} \
             --vcf {input.vcf} \
             --group-list {input.barcodes} \
+            --min-MQ {params.min_mq} \
+            --min-BQ {params.min_bq} \
+            --cap-BQ {params.cap_bq} \
+            --excl-flag {params.excl_flag} {params.extra} \
             --out $out_prefix \
             > {log} 2>&1
         """

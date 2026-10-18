@@ -128,6 +128,9 @@ rule souporcell_vartrix:
         alt=out_dir / "souporcell/{platform}/{capture_id}/alt.mtx",
         barcodes=out_dir / "souporcell/{platform}/{capture_id}/barcodes.tsv",
         variants=out_dir / "souporcell/{platform}/{capture_id}/variants.vcf",
+    params:
+        mapq=config["params"]["souporcell"]["mapq"],
+        extra=config["params"]["souporcell"]["extra"],
     log:
         logs / "souporcell/{platform}/{capture_id}/vartrix.log",
     container:
@@ -141,9 +144,9 @@ rule souporcell_vartrix:
         r"""
         gunzip -c {input.barcodes} > {output.barcodes}
         cp {input.vcf} {output.variants}
-        vartrix --mapq 30 -b {input.bam} -c {output.barcodes} \
+        vartrix --mapq {params.mapq} -b {input.bam} -c {output.barcodes} \
             --scoring-method coverage --threads {resources.threads} \
             --ref-matrix {output.ref} --out-matrix {output.alt} \
-            -v {output.variants} --fasta {input.fasta} --umi \
+            -v {output.variants} --fasta {input.fasta} --umi {params.extra} \
             > {log} 2>&1
         """

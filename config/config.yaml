@@ -73,15 +73,26 @@ params:
     # minCOUNT 1 (keep every site, however rare).
     minMAF: 0.0
     minCOUNT: 1
+    # Read-admission QC (pinned to cellSNP-lite's own defaults so they are
+    # explicit and version-stable; change to retune). NB the engines' MAPQ
+    # defaults differ — cellSNP/popscle 20, vartrix 30 — see docs.
+    min_mapq: 20       # --minMAPQ
+    min_len: 30        # --minLEN (min mapped read length)
     # Per-platform extra cellsnp-lite flags. Defaults assume 10x CB/UB tags.
     # The `long` row is a documented placeholder to be tuned against real PacBio
     # single-cell BAMs (splice-aware; UMI semantics may differ; see docs).
     platform_args:
       short: ""
       long: ""
-  # popscle applicability: which platforms it runs on.
+  # popscle. `platforms`: which platforms it runs on. The QC values below are
+  # pinned to popscle dsc-pileup's own defaults (explicit + version-stable).
   popscle:
     platforms: [short]
+    min_mq: 20         # --min-MQ (mapping quality)
+    min_bq: 13         # --min-BQ (base quality; popscle is the only engine that filters on BQ)
+    cap_bq: 40         # --cap-BQ
+    excl_flag: 3844    # --excl-flag (SAM flags excluded)
+    extra: ""          # free-form extra dsc-pileup flags
   # souporcell prep (remap + vartrix). vartrix counts at the covered subset of
   # sites_vcf (genotype-free); min_cov = min read depth for a site to be kept
   # (souporcell's min_ref+min_alt, default 20).
@@ -89,6 +100,8 @@ params:
     skip_remap: true   # vartrix on the original BAM (remap validated a no-op)
     min_cov: 20
     platforms: [short]
+    mapq: 30           # vartrix --mapq (souporcell's convention; stricter than cellSNP/popscle's 20)
+    extra: ""          # free-form extra vartrix flags
 
 # -- Reference dependencies -- #
 ref:

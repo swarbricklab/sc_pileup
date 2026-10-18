@@ -33,15 +33,24 @@ params:
     # Keep every site with >=1 read (the fixture is deliberately low-coverage).
     minMAF: 0.0
     minCOUNT: 1
+    min_mapq: 20
+    min_len: 30
     platform_args:
       short: ""
       long: ""
   popscle:
     platforms: [short]
+    min_mq: 20
+    min_bq: 13
+    cap_bq: 40
+    excl_flag: 3844
+    extra: ""
   souporcell:
     skip_remap: true    # vartrix on the original BAM (remap validated a no-op)
     min_cov: 2          # low, to match the small fixture's coverage
     platforms: [short]
+    mapq: 30
+    extra: ""
 
 ref:
   souporcell:
