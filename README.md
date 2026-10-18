@@ -37,6 +37,12 @@ Outputs are written under `results/<engine>/<platform>/<capture_id>/` so
 short- and long-read pileups of the same capture coexist and can be merged
 per cell downstream.
 
+A summary QC pass (`qc: true`, default) also writes per-capture and cohort
+coverage metrics as CSV under `results/qc/` — `cohort_metrics.csv` has one row per
+capture × engine (cells, sites, covered sites, total depth, ALT fraction, …). It
+only *reads* the pileup outputs, so it changes nothing downstream. See
+[`workflow/rules/qc.smk`](workflow/rules/qc.smk).
+
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —
 this is the main reason the malignant-detection direction is worth pursuing. The

@@ -12,6 +12,7 @@ include: "rules/panel.smk"
 include: "rules/cellsnp.smk"
 include: "rules/popscle.smk"
 include: "rules/souporcell.smk"
+include: "rules/qc.smk"
 
 
 rule all:

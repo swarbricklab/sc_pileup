@@ -41,6 +41,11 @@ outs:
 # which lean on freemuxlet. Default keeps popscle pending team sign-off.
 engines: [cellsnp, popscle, souporcell]
 
+# -- QC summary metrics -- #
+# Additive, downstream-neutral: writes per-capture + cohort coverage metrics
+# (CSV) under <outs.root>/qc/. Set false to skip. See workflow/rules/qc.smk.
+qc: true
+
 # -- Which VCF each capture piles at (3 modes) -- #
 # 1. Global: engines pile at `deps.sites_vcf` (below). Default; correct for a
 #    single shared panel or a somatic/Track-A VCF.
