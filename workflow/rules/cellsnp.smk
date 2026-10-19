@@ -11,8 +11,10 @@
 #     capture coexist and can be merged per cell downstream;
 #   * per-platform extra flags via cellsnp_extra().
 
+
 wildcard_constraints:
     platform="short|long",
+
 
 rule cellsnp_pileup:
     input:
@@ -25,16 +27,16 @@ rule cellsnp_pileup:
         ad=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.tag.AD.mtx",
         dp=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.tag.DP.mtx",
         oth=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.tag.OTH.mtx",
+    log:
+        logs / "cellsnp/{platform}/{capture_id}.log",
+    container:
+        config["containers"]["cellsnp"]
     params:
         minMAF=config["params"]["cellsnp_lite"]["minMAF"],
         minCOUNT=config["params"]["cellsnp_lite"]["minCOUNT"],
         min_mapq=config["params"]["cellsnp_lite"]["min_mapq"],
         min_len=config["params"]["cellsnp_lite"]["min_len"],
         extra=cellsnp_extra,
-    log:
-        logs / "cellsnp/{platform}/{capture_id}.log",
-    container:
-        config["containers"]["cellsnp"]
     shell:
         """
         outdir=$(dirname {output.base})
@@ -48,5 +50,5 @@ rule cellsnp_pileup:
             --minMAPQ {params.min_mapq} \
             --minLEN {params.min_len} \
             --gzip {params.extra} \
-            > {log} 2>&1
+            >{log} 2>&1
         """

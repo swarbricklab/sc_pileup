@@ -35,8 +35,8 @@ rule split_bam_by_chromosome:
         config["containers"]["samtools"]
     shell:
         """
-        samtools view -b {input.bam} {wildcards.chrom} > {output.bam} 2> {log}
-        samtools index {output.bam} 2>> {log}
+        samtools view -b {input.bam} {wildcards.chrom} >{output.bam} 2>{log}
+        samtools index {output.bam} 2>>{log}
         """
 
 
@@ -52,8 +52,8 @@ rule split_vcf_by_chromosome:
         config["containers"]["bcftools"]
     shell:
         """
-        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output.vcf} 2> {log}
-        bcftools index {output.vcf} 2>> {log}
+        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output.vcf} 2>{log}
+        bcftools index {output.vcf} 2>>{log}
         """
 
 
@@ -67,16 +67,16 @@ rule dsc_pileup_by_chromosome:
         plp=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.plp.gz"),
         umi=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.umi.gz"),
         var=temp(out_dir / "popscle/{platform}/{capture_id}/by_chrom/{chrom}.var.gz"),
+    log:
+        logs / "popscle/{platform}/{capture_id}/dsc_pileup_{chrom}.log",
+    container:
+        config["containers"]["popscle"]
     params:
         min_mq=config["params"]["popscle"]["min_mq"],
         min_bq=config["params"]["popscle"]["min_bq"],
         cap_bq=config["params"]["popscle"]["cap_bq"],
         excl_flag=config["params"]["popscle"]["excl_flag"],
         extra=config["params"]["popscle"]["extra"],
-    log:
-        logs / "popscle/{platform}/{capture_id}/dsc_pileup_{chrom}.log",
-    container:
-        config["containers"]["popscle"]
     shell:
         """
         cel={output.cel}
@@ -90,7 +90,7 @@ rule dsc_pileup_by_chromosome:
             --cap-BQ {params.cap_bq} \
             --excl-flag {params.excl_flag} {params.extra} \
             --out $out_prefix \
-            > {log} 2>&1
+            >{log} 2>&1
         """
 
 
@@ -102,7 +102,9 @@ rule merge_cel:
         ),
     output:
         cel=out_dir / "popscle/{platform}/{capture_id}/pileup.cel.gz",
-        sample_map=temp(out_dir / "popscle/{platform}/{capture_id}/full_sample_map.tsv.gz"),
+        sample_map=temp(
+            out_dir / "popscle/{platform}/{capture_id}/full_sample_map.tsv.gz"
+        ),
     log:
         logs / "popscle/{platform}/{capture_id}/merge_cel.log",
     script:
@@ -145,10 +147,10 @@ rule merge_plp:
         ),
     output:
         plp=out_dir / "popscle/{platform}/{capture_id}/pileup.plp.gz",
-    container:
-        config["containers"]["bcftools"]
     log:
         logs / "popscle/{platform}/{capture_id}/merge_plp.log",
+    container:
+        config["containers"]["bcftools"]
     shell:
         # Stack the per-chromosome wrangled PLPs (identical tab-separated schema)
         # keeping a single header. Replaces snp_demux's csvkit dependency (an
@@ -157,8 +159,11 @@ rule merge_plp:
         r"""
         first=1
         for f in {input.plp}; do
-            if [ "$first" -eq 1 ]; then cat "$f"; first=0; else tail -n +2 "$f"; fi
-        done | gzip -n > {output.plp} 2> {log}
+            if [ "$first" -eq 1 ]; then
+                cat "$f"
+                first=0
+            else tail -n +2 "$f"; fi
+        done | gzip -n >{output.plp} 2>{log}
         """
 
 

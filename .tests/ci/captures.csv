@@ -1,0 +1,2 @@
+capture_id,platform,bam,barcodes
+ci_cap,short,.tests/ci/pileup.bam,.tests/ci/barcodes.tsv.gz

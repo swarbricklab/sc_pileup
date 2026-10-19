@@ -1,0 +1,90 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+description: >-
+  sc_pileup configuration. Validated at workflow start via
+  snakemake.utils.validate() in the Snakefile.
+type: object
+properties:
+  deps:
+    type: object
+    properties:
+      captures:
+        type: string
+        description: Path to captures.csv (capture_id, platform, bam, barcodes; optional donors, sites_vcf).
+      sites_vcf:
+        type: string
+        description: Path to the sites VCF the pileups are counted at (unless built in-workflow).
+    required: [captures, sites_vcf]
+    additionalProperties: false
+  outs:
+    type: object
+    properties:
+      root: {type: string, description: Root for all data outputs.}
+      logs: {type: string, description: Root for per-rule logs.}
+    required: [root, logs]
+    additionalProperties: false
+  engines:
+    type: array
+    description: Which pileup engines to run.
+    items:
+      type: string
+      enum: [cellsnp, popscle, souporcell]
+  qc:
+    type: boolean
+    description: Whether to emit per-engine QC metrics.
+  panel:
+    type: object
+    properties:
+      build_in_workflow: {type: boolean}
+      common_sites: {type: ["string", "null"]}
+      informative: {type: boolean}
+    additionalProperties: false
+  params:
+    type: object
+    properties:
+      cellsnp_lite:
+        type: object
+        properties:
+          minMAF: {type: number}
+          minCOUNT: {type: integer}
+          min_mapq: {type: integer}
+          min_len: {type: integer}
+          platform_args: {type: object}
+        required: [minMAF, minCOUNT, min_mapq, min_len]
+      popscle:
+        type: object
+        properties:
+          platforms: {type: array, items: {type: string}}
+          min_mq: {type: integer}
+          min_bq: {type: integer}
+          cap_bq: {type: integer}
+          excl_flag: {type: integer}
+          extra: {type: string}
+        required: [platforms, min_mq, min_bq, cap_bq, excl_flag, extra]
+      souporcell:
+        type: object
+        properties:
+          skip_remap: {type: boolean}
+          min_cov: {type: integer}
+          platforms: {type: array, items: {type: string}}
+          mapq: {type: integer}
+          extra: {type: string}
+    required: [cellsnp_lite, popscle]
+  ref:
+    type: object
+    properties:
+      souporcell:
+        type: object
+        properties:
+          genome_fasta: {type: string}
+        required: [genome_fasta]
+  containers:
+    type: object
+    properties:
+      cellsnp: {type: string}
+      popscle: {type: string}
+      samtools: {type: string}
+      bcftools: {type: string}
+      souporcell: {type: string}
+    required: [cellsnp, popscle, samtools, bcftools, souporcell]
+    additionalProperties: false
+required: [deps, outs, params, containers]
