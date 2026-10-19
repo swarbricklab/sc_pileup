@@ -41,7 +41,12 @@ rule capture_metrics:
 rule cohort_metrics:
     input:
         lambda wc: [
-            str(out_dir / "qc" / captures.loc[c, "platform"] / (str(c) + ".metrics.csv"))
+            str(
+                out_dir
+                / "qc"
+                / captures.loc[c, "platform"]
+                / (str(c) + ".metrics.csv")
+            )
             for c in captures.index
         ],
     output:

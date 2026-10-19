@@ -26,15 +26,15 @@ rule informative_panel:
     output:
         vcf=out_dir / "panel/{capture_id}/informative.vcf.gz",
         idx=out_dir / "panel/{capture_id}/informative.vcf.gz.csi",
+    log:
+        logs / "panel/{capture_id}.log",
+    container:
+        config["containers"]["bcftools"]
     params:
         donors=pool_donors,
         out_root=str(out_dir / "panel"),
         common_arg=panel_common_arg,
         informative_arg=panel_informative_arg,
-    log:
-        logs / "panel/{capture_id}.log",
-    container:
-        config["containers"]["bcftools"]
     shell:
         """
         bash {input.tool} \
@@ -43,5 +43,5 @@ rule informative_panel:
             --capture {wildcards.capture_id} \
             --donors '{params.donors}' \
             {params.common_arg} {params.informative_arg} \
-            > {log} 2>&1
+            >{log} 2>&1
         """

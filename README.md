@@ -1,5 +1,7 @@
 # sc_pileup
 
+[![CI](https://github.com/swarbricklab/sc_pileup/actions/workflows/ci.yml/badge.svg)](https://github.com/swarbricklab/sc_pileup/actions/workflows/ci.yml)
+
 A small, reusable Snakemake workflow that turns single-cell BAMs into **per-cell
 REF/ALT count matrices** at a configurable set of sites. It factors the
 expensive, deterministic *pileup* out of the *assignment* step so that:
