@@ -9,23 +9,31 @@ _VALID_PLATFORMS = {"short", "long"}
 _bad = set(captures["platform"].unique()) - _VALID_PLATFORMS
 if _bad:
     # plain concatenation (see note in pileup_targets re: f-strings in .smk)
-    raise ValueError("captures.csv has unknown platform(s) " + str(_bad)
-                     + "; expected " + str(_VALID_PLATFORMS))
+    raise ValueError(
+        "captures.csv has unknown platform(s) "
+        + str(_bad)
+        + "; expected "
+        + str(_VALID_PLATFORMS)
+    )
 
 _VALID_ENGINES = {"cellsnp", "popscle", "souporcell"}
 engines = config.get("engines", ["cellsnp"])
 _bad_engines = set(engines) - _VALID_ENGINES
 if _bad_engines:
-    raise ValueError(f"config.engines has unknown engine(s) {_bad_engines}; "
-                     f"valid engines: {sorted(_VALID_ENGINES)}")
+    raise ValueError(
+        f"config.engines has unknown engine(s) {_bad_engines}; "
+        f"valid engines: {sorted(_VALID_ENGINES)}"
+    )
 _popscle_platforms = set(config["params"]["popscle"]["platforms"])
 _souporcell_platforms = set(config["params"].get("souporcell", {}).get("platforms", []))
 
 
 def lookup(field):
     """Return captures[field] for the wildcard capture_id."""
+
     def _inner(wildcards):
         return captures.loc[wildcards.capture_id, field]
+
     return _inner
 
 
@@ -48,7 +56,9 @@ def pileup_targets():
     for capture_id, row in captures.iterrows():
         plat = row["platform"]
         if "cellsnp" in engines:
-            targets.append(str(out_dir / "cellsnp" / plat / capture_id / "cellSNP.tag.AD.mtx"))
+            targets.append(
+                str(out_dir / "cellsnp" / plat / capture_id / "cellSNP.tag.AD.mtx")
+            )
         if "popscle" in engines and plat in _popscle_platforms:
             # request plp + umi explicitly: plp pulls cel/var (shared rules) but
             # not umi (produced by a separate rule).
@@ -86,12 +96,16 @@ def pool_donors(wildcards):
     """';'/','-separated donor sample names for this capture (for the tool's
     --donors / bcftools -s). Only needed when panel.build_in_workflow is set."""
     if "donors" not in captures.columns:
-        raise ValueError("panel.build_in_workflow is set but captures.csv has no "
-                         "'donors' column")
+        raise ValueError(
+            "panel.build_in_workflow is set but captures.csv has no " "'donors' column"
+        )
     val = captures.loc[wildcards.capture_id, "donors"]
     if pd.isna(val) or not str(val).strip():
-        raise ValueError("panel.build_in_workflow is set but capture '"
-                         + str(wildcards.capture_id) + "' has an empty 'donors' value")
+        raise ValueError(
+            "panel.build_in_workflow is set but capture '"
+            + str(wildcards.capture_id)
+            + "' has an empty 'donors' value"
+        )
     return str(val).strip()
 
 

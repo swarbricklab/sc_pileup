@@ -1,11 +1,19 @@
 from pathlib import Path
 import pandas as pd
+from snakemake.utils import min_version, validate
+
+min_version("7.32.0")
+
+# Fail fast with a clear message if the config is missing/misnamed keys, rather
+# than deep inside a rule. Schema in workflow/schemas/config.schema.yaml.
+validate(config, "schemas/config.schema.yaml")
 
 # Path roots (globals used across rule files)
 out_dir = Path(config["outs"]["root"])
 logs = Path(config["outs"]["logs"])
 # Reusable, project-agnostic CLIs shipped with sc_pileup (NOT workflow rules).
 tools_dir = Path(workflow.basedir).parent / "tools"
+
 
 include: "rules/common.smk"
 include: "rules/panel.smk"

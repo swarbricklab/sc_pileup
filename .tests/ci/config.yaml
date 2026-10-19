@@ -1,0 +1,43 @@
+# Minimal config for the data-independent CI (lint + schema validation + dry-run).
+# Paths are placeholders; no real data is read during --lint/validate/-n.
+deps:
+  captures: .tests/ci/captures.csv
+  sites_vcf: .tests/ci/sites.vcf.gz
+outs:
+  root: .tests/ci/out
+  logs: .tests/ci/logs
+engines: [cellsnp, popscle, souporcell]
+qc: true
+panel:
+  build_in_workflow: false
+  common_sites: null
+  informative: true
+params:
+  cellsnp_lite:
+    minMAF: 0.0
+    minCOUNT: 1
+    min_mapq: 20
+    min_len: 30
+    platform_args: {short: "", long: ""}
+  popscle:
+    platforms: [short]
+    min_mq: 20
+    min_bq: 13
+    cap_bq: 40
+    excl_flag: 3844
+    extra: ""
+  souporcell:
+    skip_remap: true
+    min_cov: 20
+    platforms: [short]
+    mapq: 30
+    extra: ""
+ref:
+  souporcell:
+    genome_fasta: .tests/ci/genome.fa
+containers:
+  cellsnp:    docker://quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3
+  popscle:    docker://ghcr.io/swarbricklab/sc_pileup-popscle:da70fc78
+  samtools:   docker://quay.io/biocontainers/samtools:1.15--h1170115_1
+  bcftools:   docker://quay.io/biocontainers/bcftools:1.13--h3a49de5_0
+  souporcell: docker://cumulusprod/souporcell:2.5
