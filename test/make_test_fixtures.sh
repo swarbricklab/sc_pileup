@@ -1,23 +1,43 @@
 #! /bin/bash
-# Regenerate the sc_pileup test fixtures (test/data/) from PUBLIC sources.
+# Regenerate the sc_pileup test fixtures (test/data/) from a PUBLIC source.
 #
 # The fixtures are DVC-tracked; this script documents their provenance and lets
-# anyone with access to the NCI a56 inputs rebuild them deterministically. It is
-# NOT run by CI — CI consumes the DVC-tracked outputs.
+# anyone rebuild them deterministically. It is NOT run by CI — CI consumes the
+# DVC-tracked outputs.
 #
 # Provenance
 # ----------
-#  * BAM + barcodes: a tiny_pbmc capture from swarbricklab/chromium-preprocessing's
-#    PUBLIC test data (downsampled 10x PBMC, run through Cell Ranger count). We take
-#    one capture (PBMC_001) and subset its cellranger BAM to two windows:
-#        chr19:1-10,000,000  and  chr22:20,000,000-30,000,000
-#    (gene-dense, well-covered; two chromosomes so popscle's per-chromosome
-#    split/merge is exercised).
-#  * sites VCF: the souporcell IGSR/1000G GRCh38 common-SNP panel
-#    (common_variants_grch38.vcf), subset to the same two windows. The panel's data
-#    rows use Ensembl-style contig names (1,19,22) while the cellranger BAM uses
-#    UCSC-style (chr1,chr19); we rename the kept rows to chr19/chr22 to match.
-#    The pileup is genotype-FREE, so the VCF only needs to be a set of positions.
+# Demuxafy's public test dataset "TestData4PipelineSmall" — the OneK1K 14-donor
+# PBMC pool (Neavin et al., Powell Lab), the canonical multi-donor demultiplexing
+# example. Downloaded from the (updated) Google Drive links in the Demuxafy docs
+# (https://demultiplexing-doublet-detecting-docs.readthedocs.io/en/latest/DataPrep.html):
+#
+#   wget -O TestData4PipelineSmall.tar.gz \
+#     'https://drive.usercontent.google.com/download?id=1cx2Wv46hoYwn659ixSFcYGVKKQw8EXDy&export=download&confirm=t'
+#   # md5: d2d5f1c2d405588de8e88b2419eebffa
+#
+# The tarball carries test_dataset/outs/pooled.sorted.bam (+.bai), the filtered
+# barcodes, and test_dataset.vcf (14 donor genotypes, 229,719 variants). The pool
+# is 1400 cells; the data are GRCh38p10 with ENSEMBL-style contigs (1,2,...).
+#
+# The SAME downsampled pool is shared with snp_demux: sc_pileup produces the
+# per-cell pileup here, and snp_demux consumes that pileup + the 14-donor genotypes
+# (test_dataset.vcf) as the demultiplexing panel.
+#
+# Transforms
+# ----------
+#  * BAM: subsample to 10% of reads (seed 42) to keep the fixture CI-small while
+#    retaining genome-wide SNP breadth (needed to separate 14 donors), then rename
+#    contigs ENSEMBL->UCSC (1->chr1 ... MT->chrM) to match the cellranger-style
+#    genome FASTA used by souporcell. Primary-chromosome coordinates are identical
+#    across GRCh38 builds, so the rename is coordinate-safe.
+#  * sites VCF: the 14-donor VCF, renamed to chr-style, restricted to autosomes
+#    (chr1..chr22) and sorted into the BAM's @SQ order (popscle requires the VCF
+#    contig order to match the BAM). It KEEPS the 14 donor genotypes (it is the
+#    donor panel): cellsnp-lite and popscle use only the positions, but the
+#    genotypes flow through souporcell's covered-variants -> variants.vcf, which
+#    snp_demux consumes as `--known_genotypes` for genotype-aware clustering. (For
+#    a standalone, non-demux pileup a sites-only common-SNP panel would do.)
 #
 # Output: test/data/{pileup.bam,pileup.bam.bai,barcodes.tsv.gz,sites.vcf.gz,sites.vcf.gz.tbi}
 set -euo pipefail
@@ -26,48 +46,45 @@ eval "$(conda shell.bash hook)"
 conda activate snakemake_7.32.4
 module load samtools bcftools htslib 2>/dev/null || true
 
-# -- Public NCI-resident inputs (override via env if your paths differ) --
-SRC_BAM=${SRC_BAM:-/scratch/a56/jr9959/chromium-preprocessing-pubprep/test/results/cellranger/count_test/bam/count/captures/PBMC_001/assigned_alignments.bam}
-SRC_BC=${SRC_BC:-/scratch/a56/jr9959/chromium-preprocessing-pubprep/test/results/cellranger/count_test/count/filtered/PBMC_001/barcodes.tsv.gz}
-SRC_VCF=${SRC_VCF:-/g/data/a56/backups/sunwu/souporcell/genotyping/annotation/common_variants_grch38.vcf}
+# -- Source tarball (download first per the header; override to point elsewhere) --
+SRC=${SRC:-/scratch/a56/jr9959/demuxafy_testdata/extracted/TestData4PipelineSmall}
+SRC_BAM="$SRC/test_dataset/outs/pooled.sorted.bam"
+SRC_BC="$SRC/test_dataset/outs/filtered_gene_bc_matrices/Homo_sapiens_GRCh38p10/barcodes.tsv"
+SRC_VCF="$SRC/test_dataset.vcf"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="$HERE/data"
 mkdir -p "$OUT"
 
-echo ">> subset BAM (chr19:1-10M + chr22:20-30M)"
-samtools view -b -o "$OUT/pileup.bam" "$SRC_BAM" chr19:1-10000000 chr22:20000000-30000000
+# Ensembl -> UCSC chr-style rename map (primary assembly; coord-identical on GRCh38)
+MAP=$(mktemp)
+{ for i in $(seq 1 22); do echo "$i chr$i"; done; echo "X chrX"; echo "Y chrY"; echo "MT chrM"; } > "$MAP"
+
+echo ">> BAM: 10% subsample (seed 42) + Ensembl->chr reheader"
+samtools view -b -s 42.1 -o "$OUT/_ds.bam" "$SRC_BAM"
+samtools view -H "$OUT/_ds.bam" | awk 'BEGIN{OFS="\t"} /^@SQ/{for(i=1;i<=NF;i++){if($i~/^SN:/){n=substr($i,4); if(n~/^([0-9]+|X|Y)$/)$i="SN:chr"n; else if(n=="MT")$i="SN:chrM"}}} {print}' > "$OUT/_hdr.sam"
+samtools reheader "$OUT/_hdr.sam" "$OUT/_ds.bam" > "$OUT/pileup.bam"
 samtools index "$OUT/pileup.bam"
+rm -f "$OUT/_ds.bam" "$OUT/_hdr.sam"
 
 echo ">> barcodes (filtered cell list, as-is)"
-install -m 0644 "$SRC_BC" "$OUT/barcodes.tsv.gz"
+gzip -c "$SRC_BC" > "$OUT/barcodes.tsv.gz"
 
-echo ">> sites VCF: two pileup windows + >=1 padding site on EVERY other autosome"
-# popscle dsc-pileup runs once per autosome chr1..chr22 and FATALs on any
-# chromosome whose (split) VCF has zero variants. Production panels are
-# genome-wide so this never bites; our two-window fixture would leave 20 empty
-# chromosomes. So we keep the real content on chr19/chr22 and add a few padding
-# sites (PAD per chromosome) on every other autosome. The BAM still only has
-# reads on chr19/chr22 — dsc-pileup tolerates sites-with-zero-reads fine.
-PAD=${PAD:-50}
-HDR=$(mktemp); REC=$(mktemp)
-# records (chrom renamed to chr-style), from the karyotypic-named source
-awk -F'\t' -v pad="$PAD" 'BEGIN{OFS="\t"} /^#/{next}
-     $1 !~ /^[0-9]+$/ {next}                               # autosomes only
-     $1=="19" && $2<=10000000              {$1="chr19"; print; next}
-     $1=="22" && $2>=20000000 && $2<=30000000 {$1="chr22"; print; next}
-     n[$1] < pad                           {c=$1; $1="chr"c; print; n[c]++}' "$SRC_VCF" > "$REC"
-# header: source meta (minus contig) + ##contig in BAM @SQ order + #CHROM
-grep '^##' "$SRC_VCF" | grep -v '^##contig' > "$HDR"
-samtools view -H "$OUT/pileup.bam" | awk -F'\t' '/^@SQ/{name="";len="";
+echo ">> sites VCF: 14-donor panel (GT kept), autosomes, chr-style, sorted to BAM @SQ order"
+bgzip -c "$SRC_VCF" > "$OUT/_orig.vcf.gz"; tabix -f -p vcf "$OUT/_orig.vcf.gz"
+bcftools annotate --rename-chrs "$MAP" "$OUT/_orig.vcf.gz" -Oz -o "$OUT/_chr.vcf.gz"
+tabix -f -p vcf "$OUT/_chr.vcf.gz"
+REG=$(for i in $(seq 1 22); do printf "chr$i,"; done | sed 's/,$//')
+bcftools view -r "$REG" "$OUT/_chr.vcf.gz" -Ov -o "$OUT/_sites.vcf"
+grep '^##' "$OUT/_sites.vcf" | grep -v '^##contig' > "$OUT/_hdr"
+samtools view -H "$OUT/pileup.bam" | awk '/^@SQ/{name="";len="";
     for(i=1;i<=NF;i++){if($i~/^SN:/)name=substr($i,4); if($i~/^LN:/)len=substr($i,4)}
-    print "##contig=<ID="name",length="len">"}' >> "$HDR"
-grep -m1 '^#CHROM' "$SRC_VCF" >> "$HDR"
-# bcftools sort orders records by the header's ##contig order (= BAM @SQ order),
-# giving a VCF whose contig ordering matches the BAM (popscle's requirement).
-cat "$HDR" "$REC" | bcftools sort -Oz -o "$OUT/sites.vcf.gz" 2>/dev/null
-rm -f "$HDR" "$REC"
-tabix -p vcf "$OUT/sites.vcf.gz"
+    if(name!="")print "##contig=<ID="name",length="len">"}' >> "$OUT/_hdr"
+grep -m1 '^#CHROM' "$OUT/_sites.vcf" >> "$OUT/_hdr"
+grep -v '^#' "$OUT/_sites.vcf" > "$OUT/_recs"
+cat "$OUT/_hdr" "$OUT/_recs" | bcftools sort -Oz -o "$OUT/sites.vcf.gz" 2>/dev/null
+tabix -f -p vcf "$OUT/sites.vcf.gz"
+rm -f "$OUT"/_orig.vcf.gz* "$OUT"/_chr.vcf.gz* "$OUT/_sites.vcf" "$OUT/_hdr" "$OUT/_recs" "$MAP"
 
 echo ">> done:"; du -h "$OUT"/* | sort -h
 echo ">> remember to: dvc add test/data && dvc push"
