@@ -1,0 +1,2 @@
+capture_id,platform,bam,barcodes
+onek1k,short,/scratch/a56/jr9959/demuxafy_testdata/full/fixture/pileup.bam,/scratch/a56/jr9959/demuxafy_testdata/full/fixture/barcodes.tsv.gz
