@@ -148,12 +148,12 @@ comments in each rule file.
 A small, self-contained reproducibility test exercises **all three engines** on a
 public fixture:
 
-- `test/data/` (DVC-tracked) — a tiny_pbmc cellranger BAM (from
-  [`chromium-preprocessing`](https://github.com/swarbricklab/chromium-preprocessing)'s
-  public test data) subset to two windows, plus a site VCF subset from the
-  souporcell IGSR/1000G GRCh38 common-SNP panel. Regenerate with
+- `test/data/` (DVC-tracked) — Demuxafy's public OneK1K 14-donor PBMC pool
+  (`TestData4PipelineSmall`, Neavin et al.), subsampled to 10% of reads and
+  chr-renamed, plus the 14-donor genotyped site VCF. Regenerate with
   [`test/make_test_fixtures.sh`](test/make_test_fixtures.sh), which documents the
-  provenance. The pileup is genotype-free, so the VCF is just positions.
+  provenance. cellSNP/popscle use only the positions; the genotypes flow through to
+  souporcell + downstream snp_demux.
 - `test/golden/` (DVC-tracked) — the expected pileup outputs.
 - Run it:
   ```bash
@@ -164,3 +164,12 @@ public fixture:
   (decompressing `.gz`, ignoring VCF headers) so gzip mtimes don't cause false
   diffs. CI (`.github/workflows/pr-validation.yml`) runs exactly this on the NCI
   qxub-runner for every PR.
+
+## Validation
+
+The test above proves **determinism**. Separately, the pileup is validated for
+**correctness** end-to-end: on the *full* OneK1K dataset, `sc_pileup → snp_demux`
+reproduces the per-method demultiplexing numbers Neavin et al. publish for Demuxafy
+(vireo/freemuxlet/souporcell). Details, comparison tables, and the one-off full-depth
+run configs are in [`docs/validation.md`](docs/validation.md) (and the primary
+write-up in `snp_demux: docs/validation/demuxafy_consistency.md`).
