@@ -1,2 +1,2 @@
 capture_id,platform,bam,barcodes
-onek1k,short,/scratch/a56/***REMOVED***/demuxafy_testdata/full/fixture/pileup.bam,/scratch/a56/***REMOVED***/demuxafy_testdata/full/fixture/barcodes.tsv.gz
+onek1k,short,../demuxafy_testdata/full/fixture/pileup.bam,../demuxafy_testdata/full/fixture/barcodes.tsv.gz

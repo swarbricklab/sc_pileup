@@ -15,7 +15,7 @@
 # provides (too large to track per-repo), at the shared a56 locations below.
 deps:
   captures: test/captures.full.csv
-  sites_vcf: /scratch/a56/***REMOVED***/demuxafy_testdata/full/fixture/sites.vcf.gz
+  sites_vcf: ../demuxafy_testdata/full/fixture/sites.vcf.gz
 
 outs:
   root: results/full_neavin
@@ -54,7 +54,7 @@ params:
 
 ref:
   souporcell:
-    genome_fasta: /scratch/a56/***REMOVED***/bcarc_chromium/resources/transcriptomes/refdata-gex-GRCh38-2020-A/fasta/genome.fa
+    genome_fasta: resources/genomes/refdata-gex-GRCh38-2020-A/fasta/genome.fa
 
 containers:
   cellsnp:    docker://quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3

@@ -1,0 +1,6 @@
+outs:
+- md5: bb72b9201156feb05365820e84c749d0.dir
+  size: 3151423926
+  nfiles: 2
+  hash: md5
+  path: fasta

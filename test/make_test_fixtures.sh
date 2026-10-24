@@ -47,7 +47,7 @@ conda activate snakemake_7.32.4
 module load samtools bcftools htslib 2>/dev/null || true
 
 # -- Source tarball (download first per the header; override to point elsewhere) --
-SRC=${SRC:-/scratch/a56/***REMOVED***/demuxafy_testdata/extracted/TestData4PipelineSmall}
+SRC=${SRC:-../demuxafy_testdata/extracted/TestData4PipelineSmall}
 SRC_BAM="$SRC/test_dataset/outs/pooled.sorted.bam"
 SRC_BC="$SRC/test_dataset/outs/filtered_gene_bc_matrices/Homo_sapiens_GRCh38p10/barcodes.tsv"
 SRC_VCF="$SRC/test_dataset.vcf"
