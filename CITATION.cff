@@ -44,6 +44,10 @@ authors:
 repository-code: "https://github.com/swarbricklab/sc_pileup"
 url: "https://github.com/swarbricklab/sc_pileup"
 license: MIT
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23657342"
+    description: "Concept DOI (resolves to the latest version)"
 keywords:
   - single-cell
   - scRNA-seq
