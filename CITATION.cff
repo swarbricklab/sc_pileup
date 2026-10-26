@@ -3,7 +3,7 @@
 cff-version: 1.2.0
 message: "If you use this workflow, please cite it using the metadata below."
 version: "1.0.0"
-date-released: "2026-10-17"
+date-released: "2026-10-26"
 title: "sc_pileup: a reusable single-cell pileup stage for per-cell REF/ALT counts at a site VCF"
 abstract: >-
   A small, reusable Snakemake workflow that turns single-cell BAMs into per-cell
