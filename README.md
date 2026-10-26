@@ -5,6 +5,7 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-%E2%89%A57.32.0-brightgreen.svg)](https://snakemake.github.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: snakefmt](https://img.shields.io/badge/code%20style-snakefmt-000000.svg)](https://github.com/snakemake/snakefmt)
+[![WorkflowHub](https://img.shields.io/badge/WorkflowHub-2361-14b8a6.svg)](https://workflowhub.eu/workflows/2361)
 
 A small, reusable Snakemake workflow that turns single-cell BAMs into **per-cell
 REF/ALT count matrices** at a configurable set of sites. It factors the
