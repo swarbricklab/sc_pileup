@@ -7,11 +7,11 @@
 #   * conda env `snakemake_7.32.4`
 #   * the fixtures + golden are materialised:  dvc pull   (or dvc checkout)
 #   * the two singularity images + genome FASTA exist at the paths in
-#     test/config.yaml (NCI-resident; see that file's header)
+#     .tests/integration/config.yaml (NCI-resident; see that file's header)
 #
 # Usage:
 #   ./run_test.sh              # run all three engines into results/test
-#   ./run_test.sh --check      # run, then content-compare results/test to test/golden
+#   ./run_test.sh --check      # run, then content-compare results/test to .tests/integration/golden
 #   ./run_test.sh -n           # dry run
 #   CORES=8 ./run_test.sh      # more local cores
 set -euo pipefail
@@ -39,7 +39,7 @@ done
 
 snakemake \
     --snakefile "$HERE/workflow/Snakefile" \
-    --configfile "$HERE/test/config.yaml" \
+    --configfile "$HERE/.tests/integration/config.yaml" \
     --workflow-profile "$HERE/profiles/workflow" \
     --use-singularity \
     --singularity-args "--bind /g/data/a56,/scratch/a56" \
@@ -48,6 +48,6 @@ snakemake \
     ${sm_args[@]+"${sm_args[@]}"}
 
 if [[ "$check" == true ]]; then
-    echo "=== comparing results/test to the golden (test/golden) ==="
-    python3 "$HERE/test/compare_golden.py" "$HERE/test/golden" "$HERE/results/test"
+    echo "=== comparing results/test to the golden (.tests/integration/golden) ==="
+    python3 "$HERE/.tests/integration/compare_golden.py" "$HERE/.tests/integration/golden" "$HERE/results/test"
 fi

@@ -153,19 +153,19 @@ comments in each rule file.
 A small, self-contained reproducibility test exercises **all three engines** on a
 public fixture:
 
-- `test/data/` (DVC-tracked) — Demuxafy's public OneK1K 14-donor PBMC pool
+- `.tests/integration/data/` (DVC-tracked) — Demuxafy's public OneK1K 14-donor PBMC pool
   (`TestData4PipelineSmall`, Neavin et al.), subsampled to 10% of reads and
   chr-renamed, plus the 14-donor genotyped site VCF. Regenerate with
-  [`test/make_test_fixtures.sh`](test/make_test_fixtures.sh), which documents the
+  [`.tests/integration/make_test_fixtures.sh`](.tests/integration/make_test_fixtures.sh), which documents the
   provenance. cellSNP/popscle use only the positions; the genotypes flow through to
   souporcell + downstream snp_demux.
-- `test/golden/` (DVC-tracked) — the expected pileup outputs.
+- `.tests/integration/golden/` (DVC-tracked) — the expected pileup outputs.
 - Run it:
   ```bash
-  dvc pull                # fetch test/data + test/golden
+  dvc pull                # fetch .tests/integration/data + .tests/integration/golden
   ./run_test.sh --check   # run all three engines, content-compare to the golden
   ```
-  [`test/compare_golden.py`](test/compare_golden.py) compares *content*
+  [`.tests/integration/compare_golden.py`](.tests/integration/compare_golden.py) compares *content*
   (decompressing `.gz`, ignoring VCF headers) so gzip mtimes don't cause false
   diffs. CI (`.github/workflows/pr-validation.yml`) runs exactly this on the NCI
   qxub-runner for every PR.

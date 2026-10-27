@@ -1,0 +1,2 @@
+capture_id,platform,bam,barcodes
+onek1k,short,.tests/integration/data/pileup.bam,.tests/integration/data/barcodes.tsv.gz
