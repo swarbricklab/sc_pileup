@@ -1,2 +1,0 @@
-capture_id,platform,bam,barcodes
-onek1k,short,test/data/pileup.bam,test/data/barcodes.tsv.gz

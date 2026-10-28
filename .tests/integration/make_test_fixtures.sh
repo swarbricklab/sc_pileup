@@ -1,5 +1,5 @@
 #! /bin/bash
-# Regenerate the sc_pileup test fixtures (test/data/) from a PUBLIC source.
+# Regenerate the sc_pileup test fixtures (.tests/integration/data/) from a PUBLIC source.
 #
 # The fixtures are DVC-tracked; this script documents their provenance and lets
 # anyone rebuild them deterministically. It is NOT run by CI — CI consumes the
@@ -39,7 +39,7 @@
 #    snp_demux consumes as `--known_genotypes` for genotype-aware clustering. (For
 #    a standalone, non-demux pileup a sites-only common-SNP panel would do.)
 #
-# Output: test/data/{pileup.bam,pileup.bam.bai,barcodes.tsv.gz,sites.vcf.gz,sites.vcf.gz.tbi}
+# Output: .tests/integration/data/{pileup.bam,pileup.bam.bai,barcodes.tsv.gz,sites.vcf.gz,sites.vcf.gz.tbi}
 set -euo pipefail
 
 eval "$(conda shell.bash hook)"
@@ -87,4 +87,4 @@ tabix -f -p vcf "$OUT/sites.vcf.gz"
 rm -f "$OUT"/_orig.vcf.gz* "$OUT"/_chr.vcf.gz* "$OUT/_sites.vcf" "$OUT/_hdr" "$OUT/_recs" "$MAP"
 
 echo ">> done:"; du -h "$OUT"/* | sort -h
-echo ">> remember to: dvc add test/data && dvc push"
+echo ">> remember to: dvc add .tests/integration/data && dvc push"
