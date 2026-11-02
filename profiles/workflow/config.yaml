@@ -73,12 +73,19 @@ set-resources:
   wrangle_plp_by_chromosome:
     threads: 1
     mem: "4GB"
+    # Explicit (small) runtime: this rule is grouped into popscle_chr, and the
+    # group's walltime sums its members' runtimes -- without this it would inherit
+    # the 600 min default and inflate the group's request. It just stacks the
+    # per-chrom PLP (seconds-minutes).
+    runtime: 15
   merge_plp:
     threads: 1
     mem: "4GB"
   wrangle_umi_by_chromosome:
     threads: 1
     mem: "4GB"
+    # Explicit (small) runtime -- grouped into popscle_chr (see wrangle_plp).
+    runtime: 15
   merge_umi:
     threads: 1
     mem: "4GB"
