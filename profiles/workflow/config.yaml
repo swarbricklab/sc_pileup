@@ -5,6 +5,28 @@ rerun-incomplete: True
 latency-wait: 30
 retries: 2
 
+# Cap simultaneous cluster submissions well under the global profile's 1000. On a
+# big cohort the popscle path fans out per-chromosome (~22 chrom x N captures =
+# thousands of jobs), which can blow a shared NCI simultaneous-job quota. This
+# throttles how many are queued at once (total work is unchanged). Override per
+# run via $@, e.g. `--jobs 200`.
+jobs: 500
+
+# Job grouping: collapse each capture-chromosome popscle chain -- split_bam +
+# split_vcf -> dsc_pileup -> wrangle_plp / wrangle_umi -- into ONE cluster job per
+# (capture, chromosome) connected component, instead of five separate submissions.
+# This removes the thousands of tiny split/wrangle jobs that make up the per-chrom
+# fan-out; the group's resources are dominated by dsc_pileup (64 GB / 240 min), the
+# other four being 2-4 GB / <=20 min. NB: no `group-components` here -- batching
+# multiple chromosomes into one job needs walltime/mem tuning and is a separate
+# change.
+groups:
+  split_bam_by_chromosome: popscle_chr
+  split_vcf_by_chromosome: popscle_chr
+  dsc_pileup_by_chromosome: popscle_chr
+  wrangle_plp_by_chromosome: popscle_chr
+  wrangle_umi_by_chromosome: popscle_chr
+
 use-conda: True
 conda-frontend: mamba
 
@@ -51,12 +73,19 @@ set-resources:
   wrangle_plp_by_chromosome:
     threads: 1
     mem: "4GB"
+    # Explicit (small) runtime: this rule is grouped into popscle_chr, and the
+    # group's walltime sums its members' runtimes -- without this it would inherit
+    # the 600 min default and inflate the group's request. It just stacks the
+    # per-chrom PLP (seconds-minutes).
+    runtime: 15
   merge_plp:
     threads: 1
     mem: "4GB"
   wrangle_umi_by_chromosome:
     threads: 1
     mem: "4GB"
+    # Explicit (small) runtime -- grouped into popscle_chr (see wrangle_plp).
+    runtime: 15
   merge_umi:
     threads: 1
     mem: "4GB"
