@@ -5,6 +5,28 @@ rerun-incomplete: True
 latency-wait: 30
 retries: 2
 
+# Cap simultaneous cluster submissions well under the global profile's 1000. On a
+# big cohort the popscle path fans out per-chromosome (~22 chrom x N captures =
+# thousands of jobs), which can blow a shared NCI simultaneous-job quota. This
+# throttles how many are queued at once (total work is unchanged). Override per
+# run via $@, e.g. `--jobs 200`.
+jobs: 500
+
+# Job grouping: collapse each capture-chromosome popscle chain -- split_bam +
+# split_vcf -> dsc_pileup -> wrangle_plp / wrangle_umi -- into ONE cluster job per
+# (capture, chromosome) connected component, instead of five separate submissions.
+# This removes the thousands of tiny split/wrangle jobs that make up the per-chrom
+# fan-out; the group's resources are dominated by dsc_pileup (64 GB / 240 min), the
+# other four being 2-4 GB / <=20 min. NB: no `group-components` here -- batching
+# multiple chromosomes into one job needs walltime/mem tuning and is a separate
+# change.
+groups:
+  split_bam_by_chromosome: popscle_chr
+  split_vcf_by_chromosome: popscle_chr
+  dsc_pileup_by_chromosome: popscle_chr
+  wrangle_plp_by_chromosome: popscle_chr
+  wrangle_umi_by_chromosome: popscle_chr
+
 use-conda: True
 conda-frontend: mamba
 
