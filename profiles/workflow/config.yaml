@@ -20,12 +20,15 @@ jobs: 500
 # other four being 2-4 GB / <=20 min. NB: no `group-components` here -- batching
 # multiple chromosomes into one job needs walltime/mem tuning and is a separate
 # change.
+# NB: snakemake's --groups takes a LIST of `rule=group` tokens, so this must be a
+# YAML list, NOT a map. As a map ({rule: group}) the profile loader never passes it
+# to --groups and grouping silently does nothing (every rule submits as its own job).
 groups:
-  split_bam_by_chromosome: popscle_chr
-  split_vcf_by_chromosome: popscle_chr
-  dsc_pileup_by_chromosome: popscle_chr
-  wrangle_plp_by_chromosome: popscle_chr
-  wrangle_umi_by_chromosome: popscle_chr
+  - split_bam_by_chromosome=popscle_chr
+  - split_vcf_by_chromosome=popscle_chr
+  - dsc_pileup_by_chromosome=popscle_chr
+  - wrangle_plp_by_chromosome=popscle_chr
+  - wrangle_umi_by_chromosome=popscle_chr
 
 use-conda: True
 conda-frontend: mamba
