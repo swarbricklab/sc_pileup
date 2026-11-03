@@ -91,6 +91,18 @@ _panel_informative = bool(_panel.get("informative", True))
 panel_common_arg = ("--common-sites " + _panel_common) if _panel_common else ""
 panel_informative_arg = "--informative" if _panel_informative else ""
 
+# popscle (dsc-pileup) aborts unless the VCF's ##contig order matches the BAM's @SQ
+# order. The cellranger BAMs carry their alignment reference's contig order (10X
+# refdata: chr1, chr10, ..., chr2, ...); split VCFs inherit the sites/panel VCF's
+# order, which can differ (e.g. an imputation reference ordered numeric chr1, chr2,
+# ...). split_vcf_by_chromosome reheaders each per-chrom VCF to this fai's order to
+# reconcile them. Defaults to the souporcell genome's .fai -- the same reference the
+# BAMs were aligned to -- so no extra config is needed; override via ref.genome_fai.
+_ref = config.get("ref", {})
+contig_order_fai = _ref.get("genome_fai") or (
+    _ref.get("souporcell", {}).get("genome_fasta", "") + ".fai"
+)
+
 
 def pool_donors(wildcards):
     """';'/','-separated donor sample names for this capture (for the tool's

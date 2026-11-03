@@ -43,6 +43,7 @@ rule split_bam_by_chromosome:
 rule split_vcf_by_chromosome:
     input:
         vcf=sites_vcf_input,
+        fai=contig_order_fai,
     output:
         vcf=temp(out_dir / "popscle/{platform}/{capture_id}/split/{chrom}.vcf.gz"),
         index=temp(out_dir / "popscle/{platform}/{capture_id}/split/{chrom}.vcf.gz.csi"),
@@ -52,8 +53,19 @@ rule split_vcf_by_chromosome:
         config["containers"]["bcftools"]
     shell:
         """
-        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output.vcf} 2>{log}
+        raw={output.vcf}.raw.vcf.gz
+        hdr={output.vcf}.hdr
+        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o $raw 2>{log}
+        # popscle dsc-pileup aborts unless the VCF ##contig order matches the BAM @SQ
+        # order. Rebuild the ##contig block from the reference fai (the order the BAMs
+        # were aligned to), preserving all other header lines and the records.
+        {{ bcftools view -h $raw | grep -v '^##contig' | grep -v '^#CHROM'
+           awk 'BEGIN{{OFS=""}}{{print "##contig=<ID=",$1,",length=",$2,">"}}' {input.fai}
+           bcftools view -h $raw | grep '^#CHROM'
+        }} > $hdr 2>>{log}
+        bcftools reheader -h $hdr $raw -o {output.vcf} 2>>{log}
         bcftools index {output.vcf} 2>>{log}
+        rm -f $raw $hdr
         """
 
 
