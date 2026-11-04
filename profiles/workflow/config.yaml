@@ -47,10 +47,17 @@ set-resources:
     threads: 32
     mem: "128GB"
     runtime: 1440
-  souporcell_covered_variants:
+  # De-novo freebayes, one job per autosome on the (remapped) BAM. freebayes is
+  # single-threaded; parallelism is across (capture, chrom). Deliberately NOT
+  # grouped -- these are real ~10+ min compute jobs, not queue-dominated splits.
+  souporcell_call_variants_by_chromosome:
     threads: 1
     mem: "16GB"
-    runtime: 360
+    runtime: 240
+  souporcell_merge_variants:
+    threads: 1
+    mem: "8GB"
+    runtime: 30
   souporcell_vartrix:
     threads: 16
     mem: "32GB"

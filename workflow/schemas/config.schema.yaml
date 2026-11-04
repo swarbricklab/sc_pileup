@@ -64,7 +64,8 @@ properties:
         type: object
         properties:
           skip_remap: {type: boolean}
-          min_cov: {type: integer}
+          min_alt: {type: integer}
+          min_ref: {type: integer}
           platforms: {type: array, items: {type: string}}
           mapq: {type: integer}
           extra: {type: string}

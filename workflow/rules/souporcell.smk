@@ -4,14 +4,16 @@
 # can resume from the matrices (clustering + troublet + consensus). See
 # docs/souporcell_split.md.
 #
-# Genotype-free: vartrix counts at the covered subset of sites_vcf (souporcell's
-# --common_variants path). The cluster count k and any cluster->donor mapping
-# (--known_genotypes) stay in snp_demux.
+# Genotype-free: de-novo variant calling with freebayes (souporcell's
+# no---common_variants path), then vartrix counts at those variants. This matches
+# the old snp_demux run, which ran souporcell_pipeline.py without --common_variants.
+# The cluster count k and any cluster->donor mapping (--known_genotypes) stay in
+# snp_demux.
 #
 # Commands are lifted verbatim from souporcell_pipeline.py (renamer -> minimap2
-# -> retag -> covered-variant depth filter -> vartrix); the whole engine runs in
+# -> retag -> freebayes -> vartrix); the whole engine runs in
 # cumulusprod/souporcell:2.5, which carries minimap2, renamer/retag, samtools,
-# bcftools, bedtools and vartrix.
+# bcftools, freebayes and vartrix.
 #
 # v1 is whole-BAM. minimap2 remap is not cleanly chromosome-splittable (reads
 # relocate genome-wide); the depth+vartrix half is, and is deferred to v1.1.
@@ -92,37 +94,58 @@ rule souporcell_remap:
         """
 
 
-rule souporcell_covered_variants:
+rule souporcell_call_variants_by_chromosome:
     input:
         bam=souporcell_bam,
         bai=souporcell_bai,
-        vcf=sites_vcf_input,
+        fasta=config["ref"]["souporcell"]["genome_fasta"],
     output:
-        vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/covered_variants.vcf"),
+        vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/by_chrom/{chrom}.vcf"),
     log:
-        logs / "souporcell/{platform}/{capture_id}/covered_variants.log",
+        logs / "souporcell/{platform}/{capture_id}/call_variants_{chrom}.log",
     container:
         config["containers"]["souporcell"]
     params:
-        min_cov=config["params"]["souporcell"]["min_cov"],
+        min_coverage=int(config["params"]["souporcell"]["min_alt"])
+        + int(config["params"]["souporcell"]["min_ref"]),
     shell:
-        # Keep only sites with read depth >= min_cov on the remapped bam, then
-        # subset sites_vcf to those covered regions (mirrors souporcell). awk
-        # form matches souporcell's ($2, $2+1) bed convention.
+        # De-novo variant calling, faithful to souporcell_pipeline.py's freebayes()
+        # on the no---common_variants path: the exact flags souporcell runs (with
+        # --min-coverage = min_alt + min_ref). Split per autosome (the `chromosomes`
+        # list popscle already uses): souporcell only region-splits for parallelism,
+        # so this is the same calling, just parallel and bounded per job. The alt /
+        # decoy / sex contigs are skipped on purpose -- the imputed VCF carries only
+        # chr1-22,X,Y, so a de-novo call off the autosomes can never match a donor
+        # SNP downstream (and scRNA coverage there is negligible anyway).
         r"""
-        d=$(dirname {output.vcf})
-        samtools depth {input.bam} \
-            | awk -v c={params.min_cov} '{{ if ($3 >= c && $3 < 100000) print $1"\t"$2"\t"($2+1)"\t"$3 }}' \
-            | bedtools merge -i - >$d/depth_merged.bed 2>{log}
-        # strip bcftools' own `##bcftools_viewCommand=...; Date=...` header line so
-        # variants.vcf is byte-reproducible (the Date varies per run); records are
-        # unchanged.
-        (
-            bcftools view -h {input.vcf} | grep -v '^##bcftools_'
-            bedtools intersect -wa -a {input.vcf} -b $d/depth_merged.bed
-        ) \
-            >{output.vcf} 2>>{log}
-        rm -f $d/depth_merged.bed
+        freebayes -f {input.fasta} -iXu -C 2 -q 20 -n 3 -E 1 -m 30 \
+            --min-coverage {params.min_coverage} --pooled-continuous --skip-coverage 100000 \
+            -r {wildcards.chrom} {input.bam} >{output.vcf} 2>{log}
+        """
+
+
+rule souporcell_merge_variants:
+    input:
+        vcfs=expand(
+            out_dir / "souporcell/{{platform}}/{{capture_id}}/by_chrom/{chrom}.vcf",
+            chrom=chromosomes,
+        ),
+    output:
+        vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/variants_called.vcf"),
+    log:
+        logs / "souporcell/{platform}/{capture_id}/merge_variants.log",
+    container:
+        config["containers"]["souporcell"]
+    shell:
+        # Combine the per-chrom freebayes VCFs (identical headers) into one, then
+        # sort to the reference contig order. Build header-once + records manually
+        # (robust to the autosome-vs-fai header ordering) rather than bcftools concat.
+        r"""
+        tmp=$(dirname {output.vcf})/variants_unsorted.vcf
+        bcftools view -h {input.vcfs[0]} >$tmp 2>{log}
+        for f in {input.vcfs}; do bcftools view -H $f >>$tmp 2>>{log}; done
+        bcftools sort -Ov -o {output.vcf} $tmp 2>>{log}
+        rm -f $tmp
         """
 
 
@@ -130,7 +153,7 @@ rule souporcell_vartrix:
     input:
         bam=souporcell_bam,
         bai=souporcell_bai,
-        vcf=rules.souporcell_covered_variants.output.vcf,
+        vcf=rules.souporcell_merge_variants.output.vcf,
         barcodes=lookup("barcodes"),
         fasta=config["ref"]["souporcell"]["genome_fasta"],
     output:
