@@ -5,30 +5,54 @@ rerun-incomplete: True
 latency-wait: 30
 retries: 2
 
-# Cap simultaneous cluster submissions well under the global profile's 1000. On a
-# big cohort the popscle path fans out per-chromosome (~22 chrom x N captures =
-# thousands of jobs), which can blow a shared NCI simultaneous-job quota. This
-# throttles how many are queued at once (total work is unchanged). Override per
-# run via $@, e.g. `--jobs 200`.
-jobs: 500
+# Cap simultaneous cluster submissions. Two distinct NCI limits apply:
+#   * max_run  = [p:a56=150]        -> at most 150 a56 jobs RUNNING at once (the
+#                                      binding throughput ceiling, shared across
+#                                      all a56 users).
+#   * max_queued = [p:PBS_GENERIC=1000] on the `normal` queue -> up to 1000 jobs
+#                                      QUEUED per project.
+# Only 150 ever run concurrently, so queuing far past that buys nothing and is
+# actively harmful: flooding to ~500 tripped "Server job limit reached for
+# project a56" and the scheduler started ZERO. Set this UNDER the run cap, and
+# lower still when other a56 users have big workflows running so the 150 shared
+# run-slots aren't monopolised. Override via $@, e.g. `--jobs 140`.
+jobs: 100
 
-# Job grouping: collapse each capture-chromosome popscle chain -- split_bam +
-# split_vcf -> dsc_pileup -> wrangle_plp / wrangle_umi -- into ONE cluster job per
-# (capture, chromosome) connected component, instead of five separate submissions.
-# This removes the thousands of tiny split/wrangle jobs that make up the per-chrom
-# fan-out; the group's resources are dominated by dsc_pileup (64 GB / 240 min), the
-# other four being 2-4 GB / <=20 min. NB: no `group-components` here -- batching
-# multiple chromosomes into one job needs walltime/mem tuning and is a separate
-# change.
-# NB: snakemake's --groups takes a LIST of `rule=group` tokens, so this must be a
-# YAML list, NOT a map. As a map ({rule: group}) the profile loader never passes it
-# to --groups and grouping silently does nothing (every rule submits as its own job).
+# Force the greedy scheduler. snakemake 7.x defaults to the ILP scheduler when
+# `pulp` is importable (it is here, 2.7.0), and ILP does NOT scale to this
+# workflow's fan-out: on a RESUME the whole per-chrom wrangle tier (~2000+ jobs)
+# becomes ready in a single tick, and CBC grinds for 10+ min on that one solve
+# while submitting nothing. Greedy schedules thousands of ready jobs instantly;
+# its only cost is suboptimal resource packing, which is moot for thousands of
+# identical 1-cpu/4GB jobs.
+scheduler: greedy
+
+# Job grouping -- VALIDATED to dispatch with `scheduler: greedy` + our pbs_submit.py.
+# (The earlier "0 group jobs dispatched" was the ILP scheduler choking on the
+# resume ready-set, NOT grouping; greedy fixes it. Verified end-to-end with a probe:
+# N jobs -> one qsub with ncpus=N / mem=N*per-job / walltime=critical-path, and the
+# N ran in parallel on the node.)
+#
+# Batch the per-chromosome wrangle fan-out onto multi-core nodes: snakemake runs a
+# group job with --cores = summed member threads, so the members run IN PARALLEL on
+# one node. This turns thousands of 1-cpu jobs into a few dozen node-jobs (easily
+# under max_run=150) and collapses the wrangle tail from ~31 h to ~3 h.
+#
+# TWO SEPARATE groups because plp and umi have wildly different runtimes -- wrangle_plp
+# ~4 s vs wrangle_umi ~90 min -- so grouping them together would strand the fast plp
+# jobs on a 240-min-wall node. group-components = 16: each group job requests 16 cpu
+# (= 16 x 1-thread) + 16 x mem (64 GB); 16-core backfills far faster than a whole
+# 48-core node. Only the wrangle rules are grouped -- split/dsc are already complete,
+# and merges/metrics stay as individual jobs.
+# NB: both --groups and --group-components take LISTS of `key=value` tokens (YAML
+# lists, NOT maps); as maps the profile loader silently drops them.
 groups:
-  - split_bam_by_chromosome=popscle_chr
-  - split_vcf_by_chromosome=popscle_chr
-  - dsc_pileup_by_chromosome=popscle_chr
-  - wrangle_plp_by_chromosome=popscle_chr
-  - wrangle_umi_by_chromosome=popscle_chr
+  - wrangle_plp_by_chromosome=plp_grp
+  - wrangle_umi_by_chromosome=umi_grp
+
+group-components:
+  - plp_grp=16
+  - umi_grp=16
 
 use-conda: True
 conda-frontend: mamba
@@ -76,19 +100,23 @@ set-resources:
   wrangle_plp_by_chromosome:
     threads: 1
     mem: "4GB"
-    # Explicit (small) runtime: this rule is grouped into popscle_chr, and the
-    # group's walltime sums its members' runtimes -- without this it would inherit
-    # the 600 min default and inflate the group's request. It just stacks the
-    # per-chrom PLP (seconds-minutes).
-    runtime: 15
+    # wrangle_plp is trivially fast (measured median ~4 s, max ~11 s over 120 jobs),
+    # so a short wall is correct -- and since it's in its OWN group (plp_grp) the
+    # group walltime = max member runtime, keeping those node-jobs short and
+    # backfill-friendly. (Contrast wrangle_umi below, ~90 min.) 16 of these batch
+    # into a 16-cpu / 64 GB node-job.
+    runtime: 30
   merge_plp:
     threads: 1
     mem: "4GB"
   wrangle_umi_by_chromosome:
     threads: 1
     mem: "4GB"
-    # Explicit (small) runtime -- grouped into popscle_chr (see wrangle_plp).
-    runtime: 15
+    # The expensive wrangle step: measured median ~86 min, max ~171 min over 120
+    # jobs, so the 240-min wall is required (15 min timed out 100% of them, exit
+    # -29). Batched 16-per-node via umi_grp -> 16-cpu / 64 GB / 240-min group jobs
+    # running 16 chromosomes in parallel.
+    runtime: 240
   merge_umi:
     threads: 1
     mem: "4GB"
