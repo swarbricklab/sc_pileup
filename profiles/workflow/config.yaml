@@ -40,6 +40,10 @@ set-resources:
     threads: 32
     mem: "32GB"
     runtime: 1440
+  read_filter_bam:
+    threads: 4
+    mem: "8GB"
+    runtime: 240
   souporcell_remap:
     threads: 32
     mem: "128GB"

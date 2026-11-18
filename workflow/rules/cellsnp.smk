@@ -9,7 +9,8 @@
 #   * site VCF is `sites_vcf` (generic), not the hard-coded donor panel;
 #   * output path carries {platform} so short- and long-read pileups of the same
 #     capture coexist and can be merged per cell downstream;
-#   * per-platform extra flags via cellsnp_extra().
+#   * per-platform extra flags via cellsnp_extra();
+#   * optional nM/NH read pre-filter (params.read_filter; rules/read_filter.smk).
 
 
 wildcard_constraints:
@@ -18,7 +19,8 @@ wildcard_constraints:
 
 rule cellsnp_pileup:
     input:
-        bam=lookup("bam"),
+        bam=cellsnp_bam,
+        bai=cellsnp_bai,
         barcodes=lookup("barcodes"),
         vcf=sites_vcf_input,
         site_check=site_check_input,

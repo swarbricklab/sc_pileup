@@ -70,6 +70,15 @@ properties:
           min_len: {type: integer}
           platform_args: {type: object}
         required: [minMAF, minCOUNT, min_mapq, min_len]
+      read_filter:
+        type: ["object", "null"]
+        description: >-
+          Optional nM/NH read pre-filter for the cellsnp engine (null/absent = off).
+          Reads lacking the tag are kept.
+        properties:
+          max_nM: {type: ["integer", "null"], minimum: 0}
+          max_NH: {type: ["integer", "null"], minimum: 1}
+        additionalProperties: false
       popscle:
         type: object
         properties:
