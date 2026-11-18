@@ -41,6 +41,44 @@ def get_platform(wildcards):
     return captures.loc[wildcards.capture_id, "platform"]
 
 
+# --- Optional nM/NH read pre-filter (cellsnp engine; see rules/read_filter.smk)
+_read_filter = config["params"].get("read_filter") or {}
+_read_filter_terms = []
+for _tag, _key in [("nM", "max_nM"), ("NH", "max_NH")]:
+    if _read_filter.get(_key) is not None:
+        # keep reads lacking the tag; drop only those that exceed the cap
+        _read_filter_terms.append(
+            "(!["
+            + _tag
+            + "] || ["
+            + _tag
+            + "] <= "
+            + str(int(_read_filter[_key]))
+            + ")"
+        )
+read_filter_expr = " && ".join(_read_filter_terms)
+
+
+def cellsnp_bam(wildcards):
+    """The BAM cellsnp reads: the nM/NH-filtered copy when params.read_filter is
+    on, else the capture's own BAM."""
+    if read_filter_expr:
+        return str(
+            out_dir
+            / "read_filter"
+            / get_platform(wildcards)
+            / wildcards.capture_id
+            / "filtered.bam"
+        )
+    return captures.loc[wildcards.capture_id, "bam"]
+
+
+def cellsnp_bai(wildcards):
+    """The filtered BAM's index (so temp() keeps it until cellsnp is done);
+    [] when the filter is off, leaving the original cellsnp inputs unchanged."""
+    return (cellsnp_bam(wildcards) + ".bai") if read_filter_expr else []
+
+
 def cellsnp_extra(wildcards):
     """Per-platform extra cellsnp-lite flags."""
     plat = captures.loc[wildcards.capture_id, "platform"]

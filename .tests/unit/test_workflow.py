@@ -207,6 +207,55 @@ def test_bad_panel_kind(w):
 
 
 # --------------------------------------------------------------------------- #
+# #17 nM/NH read pre-filter
+# --------------------------------------------------------------------------- #
+# data/reads.sam: 6 reads over chrT:100 (A>G), 2 barcodes, one UMI each.
+#   r1 A nM0 NH1 | r2 G nM1 NH1 | r3 G nM7 NH1 | r4 A nM0 NH2 | r5 G nM2 NH1
+#   r6 A, no nM/NH tags (kept: the filter only drops reads that fail it)
+def _reads_workdir(w):
+    sh(f"samtools view -b -o {w.path('pileup.bam')} {DATA / 'reads.sam'}"
+       f" && samtools index {w.path('pileup.bam')}")
+    sh(f"gzip -c {DATA / 'read_barcodes.tsv'} > {w.path('barcodes.tsv.gz')}")
+    w.bgzip_vcf(DATA / "read_sites.vcf", "sites.vcf.gz")
+    w.path("genome.fa").touch()
+    w.write_captures([dict(capture_id="cap1", platform="short",
+                           bam=w.path("pileup.bam"),
+                           barcodes=w.path("barcodes.tsv.gz"))],
+                     ["capture_id", "platform", "bam", "barcodes"])
+
+
+def mtx_total(path):
+    with open(path) as fh:
+        body = [ln.split() for ln in fh if not ln.startswith("%")][1:]
+    return sum(int(float(v)) for _, _, v in body)
+
+
+def test_read_filter_off_is_noop(w):
+    _reads_workdir(w)
+    w.write_config({"params": {"read_filter": {"max_nM": None, "max_NH": None}}})
+    dry = w.snakemake(dry=True).stdout
+    assert "read_filter_bam" not in dry
+    assert "--samFile " + str(w.path("pileup.bam")) in dry
+    w.snakemake()
+    cs = w.out / "cellsnp/short/cap1"
+    assert mtx_total(cs / "cellSNP.tag.DP.mtx") == 6
+    assert mtx_total(cs / "cellSNP.tag.AD.mtx") == 3
+
+
+def test_read_filter_on_drops_nm_nh(w):
+    _reads_workdir(w)
+    w.write_config({"params": {"read_filter": {"max_nM": 5, "max_NH": 1}}})
+    w.snakemake()
+    cs = w.out / "cellsnp/short/cap1"
+    # r3 (nM 7, ALT) and r4 (NH 2, REF) are gone: DP 6 -> 4, AD 3 -> 2
+    assert mtx_total(cs / "cellSNP.tag.DP.mtx") == 4
+    assert mtx_total(cs / "cellSNP.tag.AD.mtx") == 2
+    log = (w.logs / "read_filter/short/cap1.log").read_text()
+    assert "reads in:  6" in log and "reads out: 4" in log, log
+    assert not (w.out / "read_filter/short/cap1/filtered.bam").exists()  # temp()
+
+
+# --------------------------------------------------------------------------- #
 def main(argv):
     pattern = argv[1] if len(argv) > 1 else ""
     tests = [(n, f) for n, f in sorted(globals().items())

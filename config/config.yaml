@@ -98,6 +98,18 @@ params:
     platform_args:
       short: ""
       long: ""
+  # Optional read pre-filter for the cellsnp engine (default off). cellSNP-lite
+  # admits reads on MAPQ + mapped length only; it has no filter on mismatches
+  # (`nM`), alignment count (`NH`) or base quality. For somatic sites (1-2 UMIs
+  # per cell) multi-mismatch / multi-mapping reads are a meaningful share of false
+  # ALT counts; SComatic recommends max_nM: 5, max_NH: 1 for scRNA. Setting either
+  # inserts a `samtools view -e` pass (temp BAM) that cellsnp reads instead of the
+  # original. Reads lacking the tag (minimap2 long-read BAMs) are kept. popscle /
+  # souporcell are unaffected. NB no BQ floor in cellSNP-lite: its effect is
+  # measured by downstream per-site QC (somatifind), not filtered here.
+  read_filter:
+    max_nM: null       # e.g. 5
+    max_NH: null       # e.g. 1
   # popscle. `platforms`: which platforms it runs on. The QC values below are
   # pinned to popscle dsc-pileup's own defaults (explicit + version-stable).
   popscle:

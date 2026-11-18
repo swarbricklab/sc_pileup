@@ -70,6 +70,20 @@ column in `captures.csv`). Two guards then apply:
 Germline captures (the default) never reach these rules, so their DAG and
 outputs are unchanged.
 
+### Optional nM/NH read pre-filter (`params.read_filter`)
+
+cellSNP-lite admits reads on MAPQ and mapped length only. For somatic sites,
+where the signal is often 1–2 UMIs per cell, multi-mismatch and multi-mapping
+reads are a meaningful share of false ALT counts. Setting
+`params.read_filter: {max_nM: 5, max_NH: 1}` (SComatic's scRNA recommendation;
+default off) inserts a `samtools view -e` pass whose temporary output cellsnp
+reads instead of the original BAM. Reads that lack the tag, such as minimap2
+long-read alignments, are kept. popscle and souporcell are unaffected.
+
+cellSNP-lite also has **no base-quality floor** (popscle is the only engine with
+one). Base-quality masking is deliberately not done here: its effect is measured
+downstream by per-site QC in `somatifind`.
+
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —
 this is the main reason the malignant-detection direction is worth pursuing. The
