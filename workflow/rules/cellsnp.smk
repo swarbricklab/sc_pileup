@@ -56,3 +56,22 @@ rule cellsnp_pileup:
             --gzip {params.extra} \
             >{log} 2>&1
         """
+
+
+# Same pileup over the capture's empty-droplet barcodes (barcode_sets: empties),
+# for soup genotyping. Output one level down so the cells paths are untouched.
+use rule cellsnp_pileup as cellsnp_pileup_empties with:
+    input:
+        bam=cellsnp_bam,
+        bai=cellsnp_bai,
+        barcodes=rules.select_empty_barcodes.output.barcodes,
+        vcf=sites_vcf_input,
+        site_check=site_check_input,
+    output:
+        base=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.base.vcf.gz",
+        samples=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.samples.tsv",
+        ad=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.AD.mtx",
+        dp=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.DP.mtx",
+        oth=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.OTH.mtx",
+    log:
+        logs / "cellsnp/{platform}/{capture_id}.empties.log",
