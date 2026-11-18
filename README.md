@@ -48,7 +48,10 @@ nests inside the cells outputs (see *Soup pileups* below).
 
 A summary QC pass (`qc: true`, default) also writes per-capture and cohort
 coverage metrics as CSV under `results/qc/` — `cohort_metrics.csv` has one row per
-capture × engine (cells, sites, covered sites, total depth, ALT fraction, …). It
+capture × engine × `barcode_set` (cells, sites, covered sites, total depth, ALT
+fraction, …). With soup pileups on (`barcode_sets: [cells, empties]`) each capture
+gets an extra cellsnp `empties` row, plus a `umis_per_barcode_median` column, so a
+capture with too few empties or too little soup coverage shows up early. It
 only *reads* the pileup outputs, so it changes nothing downstream. See
 [`workflow/rules/qc.smk`](workflow/rules/qc.smk).
 
