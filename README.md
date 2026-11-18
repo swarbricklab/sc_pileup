@@ -88,6 +88,20 @@ cellSNP-lite also has **no base-quality floor** (popscle is the only engine with
 one). Base-quality masking is deliberately not done here: its effect is measured
 downstream by per-site QC in `somatifind`.
 
+### Soup (empty-droplet) pileups
+
+Genotyping the ambient "soup" gives each capture's soup donor composition. It's
+needed to scale genotype-detected cross-donor contamination up to total
+contamination, and it grounds SoupX/CellBender parameters. The first step,
+`select_empty_barcodes`, picks the empty droplets per capture. These are
+barcodes in the Cell Ranger **raw** matrix (a `raw_matrix` column in
+`captures.csv` pointing at `raw_feature_bc_matrix/`) that were not called as
+cells and whose Gene Expression UMI total lies in `params.empties.umi_window`
+(default `[10, 100]`; the rationale is in `config/config.yaml`). It writes
+`results/empties/<capture_id>/barcodes.tsv.gz` and `summary.csv` (`n_selected`,
+UMI quantiles, the window used). The rule runs only when its outputs are
+requested.
+
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —
 this is the main reason the malignant-detection direction is worth pursuing. The

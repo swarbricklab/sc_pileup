@@ -118,6 +118,20 @@ params:
     platform_args:
       short: ""
       long: ""
+  # Empty-droplet ("soup") barcode selection (rule select_empty_barcodes; needs a
+  # `raw_matrix` column in captures.csv = the Cell Ranger raw_feature_bc_matrix/
+  # dir). A barcode is an empty droplet if it was NOT called as a cell and its
+  # Gene Expression UMI total is in umi_window [min, max] (inclusive).
+  #   max 100: the conventional ambient ceiling -- EmptyDrops' `lower = 100`
+  #            (barcodes <= 100 UMIs are treated as ambient) and SoupX's default
+  #            soupRange (0, 100). Above it, droplets increasingly hold cell
+  #            debris / low-quality cells that weren't called.
+  #   min 10:  drops the long tail of barcodes with a handful of UMIs (largely
+  #            barcode sequencing errors). They're millions of barcodes carrying
+  #            little soup each, and would bloat the cellsnp barcode list and
+  #            matrices for almost no extra coverage.
+  empties:
+    umi_window: [10, 100]
   # Optional read pre-filter for the cellsnp engine (default off). cellSNP-lite
   # admits reads on MAPQ + mapped length only; it has no filter on mismatches
   # (`nM`), alignment count (`NH`) or base quality. For somatic sites (1-2 UMIs
