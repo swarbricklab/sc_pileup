@@ -78,11 +78,24 @@ class Workdir:
         p.write_text(yaml.safe_dump(cfg, sort_keys=False))
         return p
 
+    def profile(self):
+        """The repo's workflow profile (set-resources etc.), minus its conda
+        settings: the rules have no conda envs and the tools are on PATH, and
+        use-conda makes snakemake call `conda info`, absent on CI runners."""
+        d = self.path("profile")
+        if not d.exists():
+            prof = yaml.safe_load((REPO / "profiles/workflow/config.yaml").read_text())
+            for k in ("use-conda", "conda-frontend"):
+                prof.pop(k, None)
+            d.mkdir()
+            (d / "config.yaml").write_text(yaml.safe_dump(prof, sort_keys=False))
+        return d
+
     def snakemake(self, targets=(), dry=False, check=True):
         cmd = [
             "snakemake", "--snakefile", str(REPO / "workflow/Snakefile"),
             "--configfile", str(self.path("config.yaml")),
-            "--workflow-profile", str(REPO / "profiles/workflow"), "--retries", "0",
+            "--workflow-profile", str(self.profile()), "--retries", "0",
             "--directory", str(self.root), "--cores", "1",
             "--printshellcmds", "--nolock",
         ]
