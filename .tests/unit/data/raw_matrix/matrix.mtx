@@ -1,0 +1,18 @@
+%%MatrixMarket matrix coordinate integer general
+%metadata_json: {"software_version": "fixture"}
+4 10 15
+1 1 300
+2 1 200
+1 2 50
+3 3 9
+1 4 4
+2 4 6
+1 5 100
+1 6 60
+3 6 41
+1 7 40
+4 7 300
+2 8 55
+4 9 20
+1 10 1
+4 1 7

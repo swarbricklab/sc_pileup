@@ -9,7 +9,7 @@ properties:
     properties:
       captures:
         type: string
-        description: Path to captures.csv (capture_id, platform, bam, barcodes; optional donors, sites_vcf, panel_kind).
+        description: Path to captures.csv (capture_id, platform, bam, barcodes; optional donors, sites_vcf, panel_kind, raw_matrix).
       sites_vcf:
         type: string
         description: Path to the sites VCF the pileups are counted at (unless built in-workflow).
@@ -86,6 +86,18 @@ properties:
                 min_len: {type: ["integer", "null"]}
               additionalProperties: false
         required: [minMAF, minCOUNT, min_mapq, min_len]
+      empties:
+        type: object
+        properties:
+          umi_window:
+            type: array
+            items: {type: integer, minimum: 0}
+            minItems: 2
+            maxItems: 2
+            description: >-
+              Inclusive [min, max] Gene Expression UMI total for a non-cell
+              barcode to count as an empty droplet.
+        additionalProperties: false
       read_filter:
         type: ["object", "null"]
         description: >-
