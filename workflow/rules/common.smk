@@ -81,6 +81,21 @@ def cellsnp_bai(wildcards):
     return (cellsnp_bam(wildcards) + ".bai") if read_filter_expr else []
 
 
+def cellsnp_platform_param(name):
+    """Input-function for a per-platform cellsnp read-admission threshold:
+    params.cellsnp_lite.platform_params.<platform>.<name>, falling back to the
+    global params.cellsnp_lite.<name>."""
+    cs = config["params"]["cellsnp_lite"]
+
+    def _inner(wildcards):
+        plat = captures.loc[wildcards.capture_id, "platform"]
+        per = (cs.get("platform_params") or {}).get(plat) or {}
+        v = per.get(name)
+        return cs[name] if v is None else v
+
+    return _inner
+
+
 def cellsnp_extra(wildcards):
     """Per-platform extra cellsnp-lite flags."""
     plat = captures.loc[wildcards.capture_id, "platform"]

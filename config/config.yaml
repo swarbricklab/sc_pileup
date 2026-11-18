@@ -90,8 +90,28 @@ params:
     # Read-admission QC (pinned to cellSNP-lite's own defaults so they are
     # explicit and version-stable; change to retune). NB the engines' MAPQ
     # defaults differ — cellSNP/popscle 20, vartrix 30 — see docs.
+    # These are the GLOBAL values; `platform_params` below overrides them per
+    # platform, because MAPQ means different things to different aligners:
+    #   * STAR (Cell Ranger, short reads): MAPQ is 255 for unique alignments,
+    #     3 / 1 / 0 for 2 / 3-4 / >4 loci. So ANY threshold in 4..255 -- incl.
+    #     20 -- just means "uniquely mapped".
+    #   * minimap2 (PacBio long reads): MAPQ is a graded 0-60 confidence; 0 =
+    #     multimapper, 60 = confident unique. 20 here is a real quality cut
+    #     (~1% estimated misplacement), not a uniqueness flag.
     min_mapq: 20       # --minMAPQ
     min_len: 30        # --minLEN (min mapped read length)
+    # Per-platform --minMAPQ / --minLEN overrides (absent/null -> global above).
+    # short: none, so short-read jobs keep the global values (unchanged).
+    # long : an EXPLICIT PLACEHOLDER, to be tuned against real PacBio single-cell
+    #        BAMs: MAPQ >= 20 on minimap2's 0-60 scale (drops multimappers and
+    #        low-confidence placements, the threshold long-read SV/SNV callers
+    #        commonly use), and min mapped length 100 -- full-length transcripts
+    #        are far longer than 30 bp, so 30 would admit fragmentary alignments.
+    platform_params:
+      short: {}
+      long:
+        min_mapq: 20
+        min_len: 100
     # Per-platform extra cellsnp-lite flags. Defaults assume 10x CB/UB tags.
     # The `long` row is a documented placeholder to be tuned against real PacBio
     # single-cell BAMs (splice-aware; UMI semantics may differ; see docs).
