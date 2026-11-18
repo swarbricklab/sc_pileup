@@ -356,6 +356,72 @@ def test_shipped_config_long_placeholder(w):
 
 
 # --------------------------------------------------------------------------- #
+# #19 empty-droplet barcode selection
+# --------------------------------------------------------------------------- #
+# data/raw_matrix: 10 barcodes, 3 GEX features + 1 antibody feature.
+# GEX UMI totals: AAAA 500 (cell), CCCC 50 (cell), GGGG 9, TTTT 10, ACAC 100,
+# AGAG 101, ATAT 40 (+300 ADT), CACA 55, CGCG 0 (+20 ADT), CTCT 1.
+RAW_GEX_TOTALS = {"AAAA-1": 500, "CCCC-1": 50, "GGGG-1": 9, "TTTT-1": 10,
+                  "ACAC-1": 100, "AGAG-1": 101, "ATAT-1": 40, "CACA-1": 55,
+                  "CGCG-1": 0, "CTCT-1": 1}
+CELLS = ["AAAA-1", "CCCC-1"]
+
+
+def _empties_workdir(w, raw_col=True):
+    raw = w.path("raw_feature_bc_matrix")
+    raw.mkdir()
+    for f in ["matrix.mtx", "barcodes.tsv", "features.tsv"]:
+        sh(f"gzip -c {DATA / 'raw_matrix' / f} > {raw / (f + '.gz')}")
+    with gzip.open(w.path("barcodes.tsv.gz"), "wt") as fh:
+        fh.write("".join(c + "\n" for c in CELLS))
+    for f in ["pileup.bam", "sites.vcf.gz", "genome.fa"]:
+        w.path(f).touch()
+    row = dict(capture_id="cap1", platform="short", bam=w.path("pileup.bam"),
+               barcodes=w.path("barcodes.tsv.gz"), raw_matrix=raw)
+    cols = ["capture_id", "platform", "bam", "barcodes"] + (["raw_matrix"] if raw_col else [])
+    w.write_captures([row], cols)
+
+
+def read_barcodes(path):
+    with gzip.open(path, "rt") as fh:
+        return [ln.rstrip("\n") for ln in fh]
+
+
+def test_empties_selection(w):
+    import pandas as pd
+    _empties_workdir(w)
+    w.write_config({"params": {"empties": {"umi_window": [10, 100]}}})
+    bc = w.out / "empties/cap1/barcodes.tsv.gz"
+    w.snakemake([bc])
+    got = read_barcodes(bc)
+    assert got == ["ACAC-1", "ATAT-1", "CACA-1", "TTTT-1"], got
+    assert not set(got) & set(CELLS)                       # disjoint from cells
+    assert all(10 <= RAW_GEX_TOTALS[b] <= 100 for b in got)  # inside the window
+    s = pd.read_csv(w.out / "empties/cap1/summary.csv").iloc[0]
+    assert s["n_selected"] == 4 and s["n_cell_barcodes_in_window"] == 1
+    assert s["umi_window_min"] == 10 and s["umi_window_max"] == 100
+    assert s["total_umis_selected"] == 205 and s["umi_median"] == 47.5, s
+    # deterministic: a re-run gives byte-identical outputs
+    first = bc.read_bytes(), (w.out / "empties/cap1/summary.csv").read_bytes()
+    w.snakemake([bc, "--forcerun", "select_empty_barcodes"])
+    assert first == (bc.read_bytes(), (w.out / "empties/cap1/summary.csv").read_bytes())
+
+
+def test_empties_not_requested_by_default(w):
+    _empties_workdir(w)
+    w.write_config()
+    dry = w.snakemake(dry=True).stdout
+    assert "select_empty_barcodes" not in dry and "empties/" not in dry
+
+
+def test_empties_needs_raw_matrix_column(w):
+    _empties_workdir(w, raw_col=False)
+    w.write_config()
+    res = w.snakemake([w.out / "empties/cap1/barcodes.tsv.gz"], dry=True, check=False)
+    assert res.returncode != 0 and "no 'raw_matrix' column" in res.stdout + res.stderr
+
+
+# --------------------------------------------------------------------------- #
 def main(argv):
     pattern = argv[1] if len(argv) > 1 else ""
     tests = [(n, f) for n, f in sorted(globals().items())

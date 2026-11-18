@@ -22,6 +22,7 @@ include: "rules/read_filter.smk"
 include: "rules/cellsnp.smk"
 include: "rules/popscle.smk"
 include: "rules/souporcell.smk"
+include: "rules/empties.smk"
 include: "rules/qc.smk"
 
 
