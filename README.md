@@ -50,6 +50,26 @@ capture × engine (cells, sites, covered sites, total depth, ALT fraction, …).
 only *reads* the pileup outputs, so it changes nothing downstream. See
 [`workflow/rules/qc.smk`](workflow/rules/qc.smk).
 
+### Somatic site panels (`panel_kind: somatic`)
+
+Pointing the engines at a somatic (Track A) site VCF instead of a germline demux
+panel? Set `panel_kind: somatic` (globally, or per capture with a `panel_kind`
+column in `captures.csv`). Two guards then apply:
+
+- The germline-only panel filters are refused at DAG build. `panel.informative`
+  keeps only sites polymorphic among the pool's genotypes and
+  `panel.common_sites` restricts to a common-SNP backbone, so either would
+  silently delete most somatic sites. The same goes for `panel.build_in_workflow`.
+- Before piling up, the site VCF's records are classified. cellSNP-lite piles up
+  biallelic SNVs only, so indels, MNVs, multiallelic and symbolic records only
+  inflate the apparent "unreachable" fraction. Their counts go to the log and to
+  `results/sites/<capture_id>/site_types.tsv`. With `somatic.non_snv: warn` (the
+  default) they're kept. With `drop`, the engines pile at a biallelic-SNV subset,
+  `results/sites/<capture_id>/biallelic_snv.vcf.gz`.
+
+Germline captures (the default) never reach these rules, so their DAG and
+outputs are unchanged.
+
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —
 this is the main reason the malignant-detection direction is worth pursuing. The
@@ -169,6 +189,16 @@ public fixture:
   (decompressing `.gz`, ignoring VCF headers) so gzip mtimes don't cause false
   diffs. CI (`.github/workflows/pr-validation.yml`) runs exactly this on the NCI
   qxub-runner for every PR.
+
+Separately, fast **unit tests** cover individual rules on tiny synthetic fixtures
+built from the text files in `.tests/unit/data/`. They run Snakemake with the
+tools on `PATH` (snakemake 7.32, bcftools, samtools, cellsnp-lite, pandas,
+pyyaml), need no containers or real data, and run in GitHub CI (`ci.yml`):
+
+```bash
+python .tests/unit/test_workflow.py            # all
+python .tests/unit/test_workflow.py somatic    # tests whose name matches
+```
 
 ## Validation
 

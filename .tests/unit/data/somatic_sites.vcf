@@ -1,0 +1,8 @@
+##fileformat=VCFv4.2
+##contig=<ID=chrT,length=1000>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chrT	100	snv1	A	G	.	PASS	.
+chrT	200	snv2	c	t	.	PASS	.
+chrT	300	ins1	G	GTT	.	PASS	.
+chrT	400	mnv1	AC	GT	.	PASS	.
+chrT	500	snv3	T	C	.	PASS	.

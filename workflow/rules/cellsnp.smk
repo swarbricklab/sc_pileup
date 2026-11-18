@@ -21,6 +21,7 @@ rule cellsnp_pileup:
         bam=lookup("bam"),
         barcodes=lookup("barcodes"),
         vcf=sites_vcf_input,
+        site_check=site_check_input,
     output:
         base=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.base.vcf.gz",
         samples=out_dir / "cellsnp/{platform}/{capture_id}/cellSNP.samples.tsv",

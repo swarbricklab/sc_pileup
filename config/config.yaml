@@ -46,6 +46,20 @@ engines: [cellsnp, popscle, souporcell]
 # (CSV) under <outs.root>/qc/. Set false to skip. See workflow/rules/qc.smk.
 qc: true
 
+# -- What kind of site VCF this is -- #
+# germline : a common-SNP / per-pool demux panel (default).
+# somatic  : a somatic (Track A) site VCF. Then the germline-only panel filters
+#            below (build_in_workflow, informative, common_sites) are REFUSED at
+#            DAG build -- they would silently delete most somatic sites -- and the
+#            site VCF is checked before piling up: records that are not biallelic
+#            SNVs (indels, MNVs, multiallelic, symbolic) can't be piled up by
+#            cellSNP-lite, so they're counted in <outs.root>/sites/<capture>/
+#            site_types.tsv and the log, and kept (`warn`) or removed (`drop`).
+# Override per capture with a `panel_kind` column in captures.csv (blank = this).
+panel_kind: germline
+somatic:
+  non_snv: warn      # warn | drop
+
 # -- Which VCF each capture piles at (3 modes) -- #
 # 1. Global: engines pile at `deps.sites_vcf` (below). Default; correct for a
 #    single shared panel or a somatic/Track-A VCF.
@@ -61,9 +75,9 @@ panel:
   # Optional common-SNP backbone (bgzipped+indexed VCF or BED/tab sites file) to
   # intersect against -- harmonises WGS vs microarray-imputed donors onto
   # identical sites. null = no common-SNP restriction. On for demux/Track-B, off
-  # for somatic/Track-A.
+  # for somatic/Track-A (enforced when panel_kind: somatic).
   common_sites: null
-  informative: true          # drop sites not polymorphic among the pool (-c 1:minor)
+  informative: true          # drop sites not polymorphic among the pool (-c 1:minor); must be false for panel_kind: somatic
 
 # -- Parameters -- #
 params:
