@@ -488,6 +488,48 @@ def test_barcode_sets_validation(w):
 
 
 # --------------------------------------------------------------------------- #
+# #21 QC metrics for soup (empties) pileups
+# --------------------------------------------------------------------------- #
+OLD_METRIC_COLS = ["capture_id", "platform", "engine", "n_cells", "n_sites",
+                   "n_sites_covered", "n_cells_covered", "total_depth", "total_alt",
+                   "total_other", "alt_fraction", "mean_depth_per_covered_site"]
+
+
+def test_qc_default_adds_only_barcode_set(w):
+    import pandas as pd
+    _reads_workdir(w)
+    w.write_config({"qc": True})
+    w.snakemake()
+    for f in [w.out / "qc/short/cap1.metrics.csv", w.out / "qc/cohort_metrics.csv"]:
+        m = pd.read_csv(f)
+        expect = OLD_METRIC_COLS[:3] + ["barcode_set"] + OLD_METRIC_COLS[3:]
+        assert list(m.columns) == expect, list(m.columns)
+        assert m["barcode_set"].tolist() == ["cells"]
+        r = m.iloc[0]
+        assert (r["n_cells"], r["total_depth"], r["total_alt"]) == (2, 6, 3), r
+
+
+def test_qc_empties_row(w):
+    import pandas as pd
+    _empties_workdir(w)
+    w.path("pileup.bam").unlink()
+    _soup_bam(w, [("AAAA-1", "A"), ("CCCC-1", "G"), ("TTTT-1", "G"),
+                  ("CACA-1", "A"), ("AGAG-1", "G")])
+    w.bgzip_vcf(DATA / "read_sites.vcf", "sites.vcf.gz")
+    w.write_config({"qc": True, "barcode_sets": ["cells", "empties"]})
+    w.snakemake()
+    m = pd.read_csv(w.out / "qc/cohort_metrics.csv")
+    assert m["barcode_set"].tolist() == ["cells", "empties"], m
+    assert m["engine"].tolist() == ["cellsnp", "cellsnp"]
+    cells, emp = m.iloc[0], m.iloc[1]
+    assert pd.isna(cells["umis_per_barcode_median"])
+    assert emp["n_cells"] == 4                 # selected empty-droplet barcodes
+    assert emp["n_cells_covered"] == 2 and emp["total_depth"] == 2
+    assert emp["total_alt"] == 1 and emp["alt_fraction"] == 0.5
+    assert emp["umis_per_barcode_median"] == 47.5
+
+
+# --------------------------------------------------------------------------- #
 def main(argv):
     pattern = argv[1] if len(argv) > 1 else ""
     tests = [(n, f) for n, f in sorted(globals().items())
