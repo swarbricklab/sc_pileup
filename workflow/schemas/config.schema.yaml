@@ -69,6 +69,17 @@ properties:
           min_mapq: {type: integer}
           min_len: {type: integer}
           platform_args: {type: object}
+          platform_params:
+            type: object
+            description: >-
+              Per-platform overrides of min_mapq / min_len (fall back to the
+              global values when absent or null).
+            additionalProperties:
+              type: ["object", "null"]
+              properties:
+                min_mapq: {type: ["integer", "null"]}
+                min_len: {type: ["integer", "null"]}
+              additionalProperties: false
         required: [minMAF, minCOUNT, min_mapq, min_len]
       read_filter:
         type: ["object", "null"]

@@ -94,7 +94,12 @@ this is the main reason the malignant-detection direction is worth pursuing. The
 `platform` dimension is wired through the config and output layout, but the
 long-read pileup parameters (splice-aware handling, UMI semantics, SNV-preferring
 site QC) are **placeholders to be tuned against real PacBio single-cell BAMs**
-(`params.cellsnp_lite.platform_args.long`). `popscle` and `souporcell` are
+(`params.cellsnp_lite.platform_args.long`, and the per-platform `--minMAPQ` /
+`--minLEN` in `params.cellsnp_lite.platform_params.long`). MAPQ means different
+things to the two aligners: STAR (Cell Ranger) writes 255 for unique alignments
+and ≤3 for multimappers, so the global `min_mapq: 20` just means "unique", while
+minimap2's MAPQ is a graded 0–60 confidence. See the comments in
+`config/config.yaml`. `popscle` and `souporcell` are
 short-read only for now.
 
 ## Tools

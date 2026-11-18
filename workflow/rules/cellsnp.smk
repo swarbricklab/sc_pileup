@@ -9,7 +9,8 @@
 #   * site VCF is `sites_vcf` (generic), not the hard-coded donor panel;
 #   * output path carries {platform} so short- and long-read pileups of the same
 #     capture coexist and can be merged per cell downstream;
-#   * per-platform extra flags via cellsnp_extra();
+#   * per-platform extra flags via cellsnp_extra(), and per-platform
+#     --minMAPQ/--minLEN via cellsnp_platform_param() (STAR vs minimap2 MAPQ);
 #   * optional nM/NH read pre-filter (params.read_filter; rules/read_filter.smk).
 
 
@@ -37,8 +38,8 @@ rule cellsnp_pileup:
     params:
         minMAF=config["params"]["cellsnp_lite"]["minMAF"],
         minCOUNT=config["params"]["cellsnp_lite"]["minCOUNT"],
-        min_mapq=config["params"]["cellsnp_lite"]["min_mapq"],
-        min_len=config["params"]["cellsnp_lite"]["min_len"],
+        min_mapq=cellsnp_platform_param("min_mapq"),
+        min_len=cellsnp_platform_param("min_len"),
         extra=cellsnp_extra,
     shell:
         """
