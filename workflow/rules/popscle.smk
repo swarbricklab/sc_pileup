@@ -43,6 +43,7 @@ rule split_bam_by_chromosome:
 rule split_vcf_by_chromosome:
     input:
         vcf=sites_vcf_input,
+        site_check=site_check_input,
     output:
         vcf=temp(out_dir / "popscle/{platform}/{capture_id}/split/{chrom}.vcf.gz"),
         index=temp(out_dir / "popscle/{platform}/{capture_id}/split/{chrom}.vcf.gz.csi"),

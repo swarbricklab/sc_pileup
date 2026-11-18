@@ -17,6 +17,7 @@ tools_dir = Path(workflow.basedir).parent / "tools"
 
 include: "rules/common.smk"
 include: "rules/panel.smk"
+include: "rules/sites.smk"
 include: "rules/cellsnp.smk"
 include: "rules/popscle.smk"
 include: "rules/souporcell.smk"

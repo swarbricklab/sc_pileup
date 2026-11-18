@@ -28,6 +28,10 @@ jobs:
             go-shfmt=3.14.1
             pandas
             jsonschema
+            pyyaml
+            bcftools=1.13
+            samtools=1.15
+            cellsnp-lite=1.2.2
           condarc: |
             channels:
               - conda-forge
@@ -45,6 +49,9 @@ jobs:
 
       - name: snakefmt check
         run: snakefmt --check workflow/
+
+      - name: Unit tests (tiny synthetic fixtures, tools on PATH, no containers)
+        run: python .tests/unit/test_workflow.py
 
       - name: snakemake lint (informational)
         continue-on-error: true

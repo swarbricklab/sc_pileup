@@ -97,6 +97,7 @@ rule souporcell_covered_variants:
         bam=souporcell_bam,
         bai=souporcell_bai,
         vcf=sites_vcf_input,
+        site_check=site_check_input,
     output:
         vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/covered_variants.vcf"),
     log:
