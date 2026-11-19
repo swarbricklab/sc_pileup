@@ -9,6 +9,9 @@
 # params.empties.umi_window. See config.yaml for the window rationale.
 #
 # Only runs when its outputs are requested (barcode_sets: [.., empties]).
+# Layout: everything for the empties set lives under <outs.root>/empties/ --
+# this selection in empties/selection/<capture_id>/, the empties pileups in
+# empties/<engine>/<platform>/<capture_id>/ -- never inside the cells outputs.
 
 
 def raw_matrix_input(wildcards):
@@ -32,10 +35,10 @@ rule select_empty_barcodes:
         raw_matrix=raw_matrix_input,
         cell_barcodes=lookup("barcodes"),
     output:
-        barcodes=out_dir / "empties/{capture_id}/barcodes.tsv.gz",
-        summary=out_dir / "empties/{capture_id}/summary.csv",
+        barcodes=out_dir / "empties/selection/{capture_id}/barcodes.tsv.gz",
+        summary=out_dir / "empties/selection/{capture_id}/summary.csv",
     log:
-        logs / "empties/{capture_id}.log",
+        logs / "empties/selection/{capture_id}.log",
     params:
         umi_window=config["params"].get("empties", {}).get("umi_window", [10, 100]),
     script:

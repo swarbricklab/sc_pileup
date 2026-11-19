@@ -391,20 +391,20 @@ def test_empties_selection(w):
     import pandas as pd
     _empties_workdir(w)
     w.write_config({"params": {"empties": {"umi_window": [10, 100]}}})
-    bc = w.out / "empties/cap1/barcodes.tsv.gz"
+    bc = w.out / "empties/selection/cap1/barcodes.tsv.gz"
     w.snakemake([bc])
     got = read_barcodes(bc)
     assert got == ["ACAC-1", "ATAT-1", "CACA-1", "TTTT-1"], got
     assert not set(got) & set(CELLS)                       # disjoint from cells
     assert all(10 <= RAW_GEX_TOTALS[b] <= 100 for b in got)  # inside the window
-    s = pd.read_csv(w.out / "empties/cap1/summary.csv").iloc[0]
+    s = pd.read_csv(w.out / "empties/selection/cap1/summary.csv").iloc[0]
     assert s["n_selected"] == 4 and s["n_cell_barcodes_in_window"] == 1
     assert s["umi_window_min"] == 10 and s["umi_window_max"] == 100
     assert s["total_umis_selected"] == 205 and s["umi_median"] == 47.5, s
     # deterministic: a re-run gives byte-identical outputs
-    first = bc.read_bytes(), (w.out / "empties/cap1/summary.csv").read_bytes()
+    first = bc.read_bytes(), (w.out / "empties/selection/cap1/summary.csv").read_bytes()
     w.snakemake([bc, "--forcerun", "select_empty_barcodes"])
-    assert first == (bc.read_bytes(), (w.out / "empties/cap1/summary.csv").read_bytes())
+    assert first == (bc.read_bytes(), (w.out / "empties/selection/cap1/summary.csv").read_bytes())
 
 
 def test_empties_not_requested_by_default(w):
@@ -417,7 +417,7 @@ def test_empties_not_requested_by_default(w):
 def test_empties_needs_raw_matrix_column(w):
     _empties_workdir(w, raw_col=False)
     w.write_config()
-    res = w.snakemake([w.out / "empties/cap1/barcodes.tsv.gz"], dry=True, check=False)
+    res = w.snakemake([w.out / "empties/selection/cap1/barcodes.tsv.gz"], dry=True, check=False)
     assert res.returncode != 0 and "no 'raw_matrix' column" in res.stdout + res.stderr
 
 
