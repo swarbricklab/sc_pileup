@@ -44,8 +44,10 @@ def get_platform(wildcards):
 # --- Optional nM/NH read pre-filter (cellsnp engine; see rules/read_filter.smk)
 _read_filter = config["params"].get("read_filter") or {}
 _read_filter_terms = []
+read_filter_tags = []  # the tags actually capped (logged: how many reads lack each)
 for _tag, _key in [("nM", "max_nM"), ("NH", "max_NH")]:
     if _read_filter.get(_key) is not None:
+        read_filter_tags.append(_tag)
         # keep reads lacking the tag; drop only those that exceed the cap
         _read_filter_terms.append(
             "(!["

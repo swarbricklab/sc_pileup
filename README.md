@@ -78,7 +78,11 @@ reads are a meaningful share of false ALT counts. Setting
 `params.read_filter: {max_nM: 5, max_NH: 1}` (SComatic's scRNA recommendation;
 default off) inserts a `samtools view -e` pass whose temporary output cellsnp
 reads instead of the original BAM. Reads that lack the tag, such as minimap2
-long-read alignments, are kept. popscle and souporcell are unaffected.
+long-read alignments, are kept. popscle and souporcell are unaffected. The
+log (`logs/read_filter/<platform>/<capture>.log`) records reads in/out and how
+many reads lack each capped tag, and warns when no read carries it (that cap is
+then inert). In Cell Ranger BAMs `nM` is often absent on most reads, leaving
+`NH` to do most of the work.
 
 cellSNP-lite also has **no base-quality floor** (popscle is the only engine with
 one). Base-quality masking is deliberately not done here: its effect is measured
