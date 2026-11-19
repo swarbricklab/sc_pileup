@@ -47,7 +47,8 @@ engines: [cellsnp, popscle, souporcell]
 # empties : empty droplets ("soup"), selected per capture by select_empty_barcodes
 #           (needs a `raw_matrix` column; see params.empties). cellsnp ONLY --
 #           popscle/souporcell aren't needed for soup genotyping. Outputs go to
-#           results/cellsnp/<platform>/<capture_id>/empties/.
+#           results/empties/cellsnp/<platform>/<capture_id>/ (the cells layout
+#           under results/empties/, next to the selection in empties/selection/).
 barcode_sets: [cells]
 
 # -- QC summary metrics -- #

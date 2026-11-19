@@ -449,10 +449,12 @@ def test_barcode_sets_empties(w):
     w.write_config({"barcode_sets": ["cells", "empties"]})
     w.snakemake()
     cells = w.out / "cellsnp/short/cap1"
-    emp = cells / "empties"
-    # cells path unchanged, empties one level down
+    emp = w.out / "empties/cellsnp/short/cap1"
+    # cells path unchanged; empties mirror it under empties/, nothing nested in cells
     assert (cells / "cellSNP.tag.AD.mtx").exists() and (emp / "cellSNP.tag.AD.mtx").exists()
-    selected = read_barcodes(w.out / "empties/cap1/barcodes.tsv.gz")
+    assert not any(p.is_dir() for p in cells.iterdir()), list(cells.iterdir())
+    assert (w.logs / "empties/cellsnp/short/cap1.log").exists()
+    selected = read_barcodes(w.out / "empties/selection/cap1/barcodes.tsv.gz")
     samples = (emp / "cellSNP.samples.tsv").read_text().split()
     assert samples == selected, (samples, selected)
     assert (cells / "cellSNP.samples.tsv").read_text().split() == CELLS
@@ -471,8 +473,8 @@ def test_barcode_sets_default_dag(w):
     both = w.snakemake(dry=True).stdout
     assert "cellsnp_pileup_empties" in both and "select_empty_barcodes" in both
     # empties is cellsnp-only: no popscle / souporcell job touches it
-    assert "popscle/short/cap1/empties" not in both
-    assert "souporcell/short/cap1/empties" not in both
+    assert "empties/cellsnp/short/cap1/cellSNP.tag.AD.mtx" in both
+    assert "empties/popscle" not in both and "empties/souporcell" not in both
 
 
 def test_barcode_sets_validation(w):

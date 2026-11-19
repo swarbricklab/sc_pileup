@@ -59,7 +59,8 @@ rule cellsnp_pileup:
 
 
 # Same pileup over the capture's empty-droplet barcodes (barcode_sets: empties),
-# for soup genotyping. Output one level down so the cells paths are untouched.
+# for soup genotyping. Output under <outs.root>/empties/cellsnp/, mirroring the
+# cells layout, so the cells paths are untouched and nothing nests inside them.
 use rule cellsnp_pileup as cellsnp_pileup_empties with:
     input:
         bam=cellsnp_bam,
@@ -68,10 +69,10 @@ use rule cellsnp_pileup as cellsnp_pileup_empties with:
         vcf=sites_vcf_input,
         site_check=site_check_input,
     output:
-        base=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.base.vcf.gz",
-        samples=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.samples.tsv",
-        ad=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.AD.mtx",
-        dp=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.DP.mtx",
-        oth=out_dir / "cellsnp/{platform}/{capture_id}/empties/cellSNP.tag.OTH.mtx",
+        base=out_dir / "empties/cellsnp/{platform}/{capture_id}/cellSNP.base.vcf.gz",
+        samples=out_dir / "empties/cellsnp/{platform}/{capture_id}/cellSNP.samples.tsv",
+        ad=out_dir / "empties/cellsnp/{platform}/{capture_id}/cellSNP.tag.AD.mtx",
+        dp=out_dir / "empties/cellsnp/{platform}/{capture_id}/cellSNP.tag.DP.mtx",
+        oth=out_dir / "empties/cellsnp/{platform}/{capture_id}/cellSNP.tag.OTH.mtx",
     log:
-        logs / "cellsnp/{platform}/{capture_id}.empties.log",
+        logs / "empties/cellsnp/{platform}/{capture_id}.log",

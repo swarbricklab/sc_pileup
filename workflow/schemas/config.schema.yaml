@@ -33,7 +33,7 @@ properties:
     description: >-
       Barcode sets to pile up per capture. `cells` (default) keeps the existing
       paths; `empties` (empty droplets, needs a raw_matrix column) runs cellsnp
-      only, into results/cellsnp/<platform>/<capture_id>/empties/.
+      only, into results/empties/cellsnp/<platform>/<capture_id>/.
     items:
       type: string
       enum: [cells, empties]
