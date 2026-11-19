@@ -98,9 +98,10 @@ barcodes in the Cell Ranger **raw** matrix (a `raw_matrix` column in
 `captures.csv` pointing at `raw_feature_bc_matrix/`) that were not called as
 cells and whose Gene Expression UMI total lies in `params.empties.umi_window`
 (default `[10, 100]`; the rationale is in `config/config.yaml`). It writes
-`results/empties/<capture_id>/barcodes.tsv.gz` and `summary.csv` (`n_selected`,
-UMI quantiles, the window used). The rule runs only when its outputs are
-requested.
+`results/empties/selection/<capture_id>/barcodes.tsv.gz` and `summary.csv`
+(`n_selected`, UMI quantiles, the window used). Everything about the empties set
+lives under `results/empties/` (and `logs/empties/`), never inside the cells
+output. The rule runs only when its outputs are requested.
 
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —
