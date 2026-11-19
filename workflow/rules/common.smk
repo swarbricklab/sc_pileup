@@ -26,8 +26,9 @@ if _bad_engines:
     )
 # Barcode sets each capture is piled up over. `cells` (the cell-called
 # `barcodes` column) keeps today's paths; `empties` (empty droplets from
-# rules/empties.smk, for soup genotyping) runs cellsnp only and lands one level
-# down, in results/cellsnp/<platform>/<capture_id>/empties/.
+# rules/empties.smk, for soup genotyping) runs cellsnp only. A non-default set S
+# mirrors the cells layout under its own root: results/S/<engine>/<platform>/
+# <capture_id>/ (empties: results/empties/cellsnp/...), never inside cells dirs.
 _VALID_BARCODE_SETS = {"cells", "empties"}
 barcode_sets = config.get("barcode_sets", ["cells"])
 _bad_sets = set(barcode_sets) - _VALID_BARCODE_SETS
@@ -51,8 +52,7 @@ if "empties" in barcode_sets:
         )
 
 
-# capture_id is one path component; this keeps .../<capture_id>/empties/... from
-# also matching the cells rules with capture_id="<id>/empties".
+# capture_id is always one path component (keeps output patterns unambiguous).
 wildcard_constraints:
     capture_id="[^/]+",
 
@@ -147,10 +147,10 @@ def pileup_targets():
             targets.append(
                 str(
                     out_dir
+                    / "empties"
                     / "cellsnp"
                     / plat
                     / capture_id
-                    / "empties"
                     / "cellSNP.tag.AD.mtx"
                 )
             )
