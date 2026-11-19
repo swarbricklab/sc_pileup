@@ -334,6 +334,15 @@ def test_platform_params_fallback(w):
     assert "--minMAPQ 1 --minLEN 30" in cmds["l.bam"], cmds
 
 
+def test_platform_params_rejects_unknown_platform(w):
+    _mixed_platform_workdir(w)
+    w.write_config({"params": {"cellsnp_lite": {"platform_params": {
+        "shrot": {"min_mapq": 1}}}}})
+    res = w.snakemake(dry=True, check=False)
+    out = res.stdout + res.stderr
+    assert res.returncode != 0 and "shrot" in out, out
+
+
 def test_shipped_config_long_placeholder(w):
     # the repo's config/config.yaml long-read placeholder is what long jobs get
     shipped = yaml.safe_load((REPO / "config/config.yaml").read_text())
