@@ -6,7 +6,8 @@
 # only inflate the apparent "unreachable" fraction downstream. This writes a
 # one-row TSV of counts and, when OUT_VCF is given, a bgzipped+indexed VCF
 # holding only the biallelic SNVs. MODE (warn|drop) sets the log message and the
-# report's non_snv_action column.
+# report's non_snv_action column (kept | dropped, or none when every record is
+# a biallelic SNV).
 #
 # Classes (first match wins, REF/ALT compared case-insensitively):
 #   multiallelic   ALT contains ','
@@ -41,7 +42,13 @@ counts=$(
 )
 read -r n snv multi mnv indel other <<<"$counts"
 non_snv=$((n - snv))
-if [[ "$mode" == "drop" ]]; then action=dropped; else action=kept; fi
+if ((non_snv == 0)); then
+    action=none
+elif [[ "$mode" == "drop" ]]; then
+    action=dropped
+else
+    action=kept
+fi
 
 printf 'capture_id\tn_records\tn_biallelic_snv\tn_non_snv\tn_multiallelic\tn_mnv\tn_indel\tn_other\tnon_snv_action\n' >"$report"
 printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \

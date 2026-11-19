@@ -181,6 +181,20 @@ def test_somatic_drop(w):
     assert "--regionsVCF " + str(sub) in dry, dry
 
 
+def test_somatic_all_snv_action_none(w):
+    _somatic_workdir(w)
+    snv_only = w.path("snv_only.vcf")
+    snv_only.write_text("".join(
+        l for l in (DATA / "somatic_sites.vcf").read_text().splitlines(True)
+        if l.startswith("#") or "\tsnv" in l))
+    w.bgzip_vcf(snv_only, "sites.vcf.gz")
+    w.write_config({"panel_kind": "somatic", "somatic": {"non_snv": "drop"}})
+    report = w.out / "sites/cap1/site_types.tsv"
+    w.snakemake([report])
+    r = read_tsv(report).iloc[0]
+    assert (r["n_non_snv"], r["non_snv_action"]) == ("0", "none"), r.to_dict()
+
+
 def test_germline_capture_skips_site_check(w):
     cols = ["capture_id", "platform", "bam", "barcodes", "panel_kind"]
     rows = [
