@@ -13,11 +13,13 @@ def _capture_metric_inputs(wildcards):
     plat = captures.loc[cid, "platform"]
     files = {}
     if "empties" in barcode_sets:
-        base = out_dir / "cellsnp" / plat / cid / "empties"
+        base = out_dir / "empties" / "cellsnp" / plat / cid
         files["empties_cellsnp_dp"] = str(base / "cellSNP.tag.DP.mtx")
         files["empties_cellsnp_ad"] = str(base / "cellSNP.tag.AD.mtx")
         files["empties_cellsnp_oth"] = str(base / "cellSNP.tag.OTH.mtx")
-        files["empties_summary"] = str(out_dir / "empties" / cid / "summary.csv")
+        files["empties_summary"] = str(
+            out_dir / "empties" / "selection" / cid / "summary.csv"
+        )
     if "cells" not in barcode_sets:
         return files
     if "cellsnp" in engines:
