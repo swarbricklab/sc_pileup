@@ -226,6 +226,8 @@ def test_bad_panel_kind(w):
 # data/reads.sam: 6 reads over chrT:100 (A>G), 2 barcodes, one UMI each.
 #   r1 A nM0 NH1 | r2 G nM1 NH1 | r3 G nM7 NH1 | r4 A nM0 NH2 | r5 G nM2 NH1
 #   r6 A, no nM/NH tags (kept: the filter only drops reads that fail it)
+# Each read carries UR as well as UB: cellsnp-lite's default --UMItag Auto reads
+# UR, and a fixture with UB only yields DP = 0 (real Cell Ranger BAMs have both).
 def _reads_workdir(w):
     sh(f"samtools view -b -o {w.path('pileup.bam')} {DATA / 'reads.sam'}"
        f" && samtools index {w.path('pileup.bam')}")
@@ -266,7 +268,27 @@ def test_read_filter_on_drops_nm_nh(w):
     assert mtx_total(cs / "cellSNP.tag.AD.mtx") == 2
     log = (w.logs / "read_filter/short/cap1.log").read_text()
     assert "reads in:  6" in log and "reads out: 4" in log, log
+    assert "reads lacking nM (kept): 1" in log, log
+    assert "reads lacking NH (kept): 1" in log and "WARNING" not in log, log
     assert not (w.out / "read_filter/short/cap1/filtered.bam").exists()  # temp()
+
+
+def test_read_filter_warns_when_tag_absent(w):
+    _reads_workdir(w)
+    # same reads with every nM tag stripped (as in e.g. a minimap2 BAM)
+    sam = w.path("no_nm.sam")
+    sam.write_text("".join(
+        "\t".join(f for f in ln.rstrip("\n").split("\t")
+                  if not f.startswith("nM:")) + "\n"
+        for ln in (DATA / "reads.sam").read_text().splitlines(True)))
+    sh(f"samtools view -b -o {w.path('pileup.bam')} {sam}"
+       f" && samtools index {w.path('pileup.bam')}")
+    w.write_config({"params": {"read_filter": {"max_nM": 5, "max_NH": None}}})
+    res = w.snakemake()
+    log = (w.logs / "read_filter/short/cap1.log").read_text()
+    assert "reads lacking nM (kept): 6" in log and "NH" not in log, log
+    assert "WARNING: no read in" in log and "nM cap removes nothing" in log, log
+    assert "nM cap removes nothing" in res.stdout + res.stderr
 
 
 # --------------------------------------------------------------------------- #

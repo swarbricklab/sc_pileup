@@ -7,7 +7,8 @@
 # `samtools view -e` pass whose output cellsnp reads in place of the original BAM
 # (SComatic recommends max_nM 5, max_NH 1 for scRNA). Reads that lack the tag
 # (e.g. minimap2 long-read BAMs carry no nM/NH) are KEPT -- the filter only
-# removes reads that positively fail it.
+# removes reads that positively fail it. The log counts the reads lacking each
+# capped tag, and warns when every read lacks it (that cap is then inert).
 #
 # Off (both null / block absent): this rule is never requested and the cellsnp
 # DAG is unchanged. popscle and souporcell always read the original BAM.
@@ -28,12 +29,22 @@ rule read_filter_bam:
         config["containers"]["samtools"]
     params:
         expr=read_filter_expr,
+        tags=" ".join(read_filter_tags),
     shell:
         """
         samtools view -b -@ {resources.threads} -e '{params.expr}' \
             -o {output.bam} {input.bam} 2>{log}
         samtools index {output.bam} 2>>{log}
         echo "read filter: {params.expr}" >>{log}
-        echo "reads in:  $(samtools view -c {input.bam})" >>{log}
-        echo "reads out: $(samtools view -c {output.bam})" >>{log}
+        n_in=$(samtools view -c -@ {resources.threads} {input.bam})
+        echo "reads in:  $n_in" >>{log}
+        echo "reads out: $(samtools view -c -@ {resources.threads} {output.bam})" >>{log}
+        for tag in {params.tags}; do
+            n_lack=$(samtools view -c -@ {resources.threads} -e "![$tag]" {input.bam})
+            echo "reads lacking $tag (kept): $n_lack" >>{log}
+            if [ "$n_in" -gt 0 ] && [ "$n_lack" -eq "$n_in" ]; then
+                echo "WARNING: no read in {input.bam} carries a $tag tag, so the" \
+                    "$tag cap removes nothing" | tee -a {log} >&2
+            fi
+        done
         """
