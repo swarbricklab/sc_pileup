@@ -425,13 +425,15 @@ def test_empties_needs_raw_matrix_column(w):
 # #20 barcode-set dimension (cells | empties)
 # --------------------------------------------------------------------------- #
 def _soup_bam(w, cbs):
-    """A BAM with one 50 bp read over chrT:100 per (barcode, base) pair."""
+    """A BAM with one 50 bp read over chrT:100 per (barcode, base) pair. Reads
+    carry UR as well as UB: cellsnp-lite's --UMItag Auto reads UR."""
     seq = ("ACGT" * 12 + "AC")
     lines = ["@HD\tVN:1.6\tSO:coordinate", "@SQ\tSN:chrT\tLN:1000"]
     for i, (cb, base) in enumerate(cbs):
         sq = seq[:20] + base + seq[21:]
         lines.append("\t".join([f"r{i}", "0", "chrT", "80", "255", "50M", "*", "0",
-                                 "0", sq, "I" * 50, f"CB:Z:{cb}", f"UB:Z:u{i}"]))
+                                 "0", sq, "I" * 50, f"CB:Z:{cb}",
+                                 f"UB:Z:u{i}", f"UR:Z:u{i}"]))
     w.path("reads.sam").write_text("\n".join(lines) + "\n")
     sh(f"samtools view -b -o {w.path('pileup.bam')} {w.path('reads.sam')}"
        f" && samtools index {w.path('pileup.bam')}")
