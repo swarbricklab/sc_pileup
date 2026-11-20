@@ -3,7 +3,8 @@
 # Goal-1 / downstream-neutral: these rules only READ the engines' existing
 # outputs and emit CSV summaries; they add nothing to, and change nothing in,
 # the pileup data the demux/somatic stages consume. Gated by `qc:` in config
-# (default on). Cohort CSV: one row per capture x engine.
+# (default on). Cohort CSV: one row per capture x engine x barcode_set
+# (`cells`, plus `empties` -- cellsnp only -- when barcode_sets includes it).
 
 
 def _capture_metric_inputs(wildcards):
@@ -11,6 +12,16 @@ def _capture_metric_inputs(wildcards):
     cid = wildcards.capture_id
     plat = captures.loc[cid, "platform"]
     files = {}
+    if "empties" in barcode_sets:
+        base = out_dir / "empties" / "cellsnp" / plat / cid
+        files["empties_cellsnp_dp"] = str(base / "cellSNP.tag.DP.mtx")
+        files["empties_cellsnp_ad"] = str(base / "cellSNP.tag.AD.mtx")
+        files["empties_cellsnp_oth"] = str(base / "cellSNP.tag.OTH.mtx")
+        files["empties_summary"] = str(
+            out_dir / "empties" / "selection" / cid / "summary.csv"
+        )
+    if "cells" not in barcode_sets:
+        return files
     if "cellsnp" in engines:
         base = out_dir / "cellsnp" / plat / cid
         files["cellsnp_dp"] = str(base / "cellSNP.tag.DP.mtx")
@@ -34,6 +45,8 @@ rule capture_metrics:
         out_dir / "qc/{platform}/{capture_id}.metrics.csv",
     log:
         logs / "qc/{platform}/{capture_id}.metrics.log",
+    params:
+        empties="empties" in barcode_sets,
     script:
         "../scripts/capture_metrics.py"
 
