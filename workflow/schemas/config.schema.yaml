@@ -68,7 +68,23 @@ properties:
           minCOUNT: {type: integer}
           min_mapq: {type: integer}
           min_len: {type: integer}
-          platform_args: {type: object}
+          platform_args:
+            type: object
+            propertyNames: {enum: [short, long]}
+          platform_params:
+            type: object
+            description: >-
+              Per-platform overrides of min_mapq / min_len (fall back to the
+              global values when absent or null). Keys must be a platform
+              (short | long), so a typo fails validation instead of being
+              silently ignored.
+            propertyNames: {enum: [short, long]}
+            additionalProperties:
+              type: ["object", "null"]
+              properties:
+                min_mapq: {type: ["integer", "null"]}
+                min_len: {type: ["integer", "null"]}
+              additionalProperties: false
         required: [minMAF, minCOUNT, min_mapq, min_len]
       read_filter:
         type: ["object", "null"]

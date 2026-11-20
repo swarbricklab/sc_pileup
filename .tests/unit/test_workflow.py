@@ -292,6 +292,70 @@ def test_read_filter_warns_when_tag_absent(w):
 
 
 # --------------------------------------------------------------------------- #
+# #18 per-platform MAPQ / length
+# --------------------------------------------------------------------------- #
+def _cellsnp_cmds(dry_stdout):
+    """{bam basename: 'cellsnp-lite ...' shell line} from a dry run with -p."""
+    import re
+    cmds = {}
+    for m in re.finditer(r"cellsnp-lite --samFile (\S+).*", dry_stdout):
+        cmds[Path(m.group(1)).name] = " ".join(m.group(0).split())
+    return cmds
+
+
+def _mixed_platform_workdir(w):
+    for f in ["s.bam", "l.bam", "barcodes.tsv.gz", "sites.vcf.gz", "genome.fa"]:
+        w.path(f).touch()
+    w.write_captures(
+        [dict(capture_id="cap_short", platform="short", bam=w.path("s.bam"),
+              barcodes=w.path("barcodes.tsv.gz")),
+         dict(capture_id="cap_long", platform="long", bam=w.path("l.bam"),
+              barcodes=w.path("barcodes.tsv.gz"))],
+        ["capture_id", "platform", "bam", "barcodes"])
+
+
+def test_platform_params_mixed(w):
+    _mixed_platform_workdir(w)
+    w.write_config({"params": {"cellsnp_lite": {"platform_params": {
+        "short": {}, "long": {"min_mapq": 7, "min_len": 200}}}}})
+    cmds = _cellsnp_cmds(w.snakemake(dry=True).stdout)
+    assert "--minMAPQ 20 --minLEN 30" in cmds["s.bam"], cmds
+    assert "--minMAPQ 7 --minLEN 200" in cmds["l.bam"], cmds
+
+
+def test_platform_params_fallback(w):
+    _mixed_platform_workdir(w)
+    # long overrides MAPQ only -> min_len falls back to the global 30;
+    # no platform_params at all for short -> global values
+    w.write_config({"params": {"cellsnp_lite": {"platform_params": {
+        "long": {"min_mapq": 1}}}}})
+    cmds = _cellsnp_cmds(w.snakemake(dry=True).stdout)
+    assert "--minMAPQ 20 --minLEN 30" in cmds["s.bam"], cmds
+    assert "--minMAPQ 1 --minLEN 30" in cmds["l.bam"], cmds
+
+
+def test_platform_params_rejects_unknown_platform(w):
+    _mixed_platform_workdir(w)
+    w.write_config({"params": {"cellsnp_lite": {"platform_params": {
+        "shrot": {"min_mapq": 1}}}}})
+    res = w.snakemake(dry=True, check=False)
+    out = res.stdout + res.stderr
+    assert res.returncode != 0 and "shrot" in out, out
+
+
+def test_shipped_config_long_placeholder(w):
+    # the repo's config/config.yaml long-read placeholder is what long jobs get
+    shipped = yaml.safe_load((REPO / "config/config.yaml").read_text())
+    pp = shipped["params"]["cellsnp_lite"]["platform_params"]
+    _mixed_platform_workdir(w)
+    w.write_config({"params": {"cellsnp_lite": {"platform_params": pp}}})
+    cmds = _cellsnp_cmds(w.snakemake(dry=True).stdout)
+    assert "--minMAPQ 20 --minLEN 30" in cmds["s.bam"], cmds
+    assert ("--minMAPQ %d --minLEN %d" % (pp["long"]["min_mapq"], pp["long"]["min_len"])
+            in cmds["l.bam"]), cmds
+
+
+# --------------------------------------------------------------------------- #
 def main(argv):
     pattern = argv[1] if len(argv) > 1 else ""
     tests = [(n, f) for n, f in sorted(globals().items())
