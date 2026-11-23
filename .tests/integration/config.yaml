@@ -48,6 +48,7 @@ params:
   souporcell:
     skip_remap: true    # vartrix on the original BAM (remap validated a no-op)
     min_cov: 2          # low, to match the small fixture's coverage
+    max_cov: 100000
     platforms: [short]
     mapq: 30
     extra: ""

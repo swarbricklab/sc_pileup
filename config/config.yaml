@@ -164,11 +164,14 @@ params:
     excl_flag: 3844    # --excl-flag (SAM flags excluded)
     extra: ""          # free-form extra dsc-pileup flags
   # souporcell prep (remap + vartrix). vartrix counts at the covered subset of
-  # sites_vcf (genotype-free); min_cov = min read depth for a site to be kept
-  # (souporcell's min_ref+min_alt, default 20).
+  # sites_vcf (genotype-free); a site is kept if min_cov <= depth < max_cov.
+  # min_cov = souporcell's min_ref+min_alt (default 20); max_cov = souporcell's
+  # hard-coded depth ceiling (100000), which excludes ultra-deep loci (IG/HLA)
+  # whose counts are dominated by ambient transcripts.
   souporcell:
     skip_remap: true   # vartrix on the original BAM (remap validated a no-op)
     min_cov: 20
+    max_cov: 100000
     platforms: [short]
     mapq: 30           # vartrix --mapq (souporcell's convention; stricter than cellSNP/popscle's 20)
     extra: ""          # free-form extra vartrix flags

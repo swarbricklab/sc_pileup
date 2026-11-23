@@ -106,18 +106,19 @@ rule souporcell_covered_variants:
         config["containers"]["souporcell"]
     params:
         min_cov=config["params"]["souporcell"]["min_cov"],
+        max_cov=config["params"]["souporcell"]["max_cov"],
     shell:
-        # Keep only sites with read depth >= min_cov on the remapped bam, then
+        # Keep only sites with min_cov <= read depth < max_cov on the bam, then
         # subset sites_vcf to those covered regions (mirrors souporcell). awk
         # form matches souporcell's ($2, $2+1) bed convention.
         # `-d 0`: samtools 1.9 (this image) caps `depth` by default, so very deep
         # sites (e.g. IG/HLA loci at >600k reads) report a few hundred and slip
-        # under the 100000 ceiling, and capped values can also fall below
-        # min_cov. `-d 0` reports true depth (= samtools >=1.13 default).
+        # under max_cov, and capped values can also fall below min_cov. `-d 0`
+        # reports true depth (= samtools >=1.13 default).
         r"""
         d=$(dirname {output.vcf})
         samtools depth -d 0 {input.bam} \
-            | awk -v c={params.min_cov} '{{ if ($3 >= c && $3 < 100000) print $1"\t"$2"\t"($2+1)"\t"$3 }}' \
+            | awk -v lo={params.min_cov} -v hi={params.max_cov} '{{ if ($3 >= lo && $3 < hi) print $1"\t"$2"\t"($2+1)"\t"$3 }}' \
             | bedtools merge -i - >$d/depth_merged.bed 2>{log}
         # strip bcftools' own `##bcftools_viewCommand=...; Date=...` header line so
         # variants.vcf is byte-reproducible (the Date varies per run); records are
