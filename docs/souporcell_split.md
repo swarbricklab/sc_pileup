@@ -57,7 +57,7 @@ coherent, non-`temp()` product.
 - **renamer**: `renamer.py --bam BAM --barcodes BC --out reads.fq --no_umi False --umi_tag UB --cell_tag CB`
 - **minimap2**: `minimap2 -ax splice -t N -G50k -k 21 -w 11 --sr -A2 -B8 -O12,32 -E2,1 -r200 -p.5 -N20 -f1000,5000 -n2 -m20 -s40 -g2000 -2K50m --secondary=no FASTA reads.fq > minimap.sam`
 - **retag**: `retag.py --sam minimap.sam --no_umi False --umi_tag UB --cell_tag CB --out tagged.bam` → `samtools sort`+`index`
-- **covered variants** (on the *remapped* bam): `samtools depth` → keep `depth ≥ min_cov` → `bedtools merge` → `bedtools intersect -wa -a sites_vcf -b covered.bed` (prepend the VCF header)
+- **covered variants** (on the *remapped* bam): `samtools depth -d 0` (uncapped) → keep `min_cov ≤ depth < 100000` → `bedtools merge` → `bedtools intersect -wa -a sites_vcf -b covered.bed` (prepend the VCF header)
 - **vartrix**: `vartrix --mapq 30 -b remapped_sorted.bam -c barcodes.tsv --scoring-method coverage --threads N --ref-matrix ref.mtx --out-matrix alt.mtx -v covered.vcf --fasta FASTA --umi`
 
 ## Chromosome-split optimisation — partial
