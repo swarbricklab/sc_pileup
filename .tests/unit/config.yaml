@@ -32,6 +32,7 @@ params:
   souporcell:
     skip_remap: true
     min_cov: 1
+    max_cov: 100000
     platforms: [short]
     mapq: 30
     extra: ""

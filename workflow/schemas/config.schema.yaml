@@ -133,9 +133,11 @@ properties:
         properties:
           skip_remap: {type: boolean}
           min_cov: {type: integer}
+          max_cov: {type: integer}
           platforms: {type: array, items: {type: string}}
           mapq: {type: integer}
           extra: {type: string}
+        required: [min_cov, max_cov]
     required: [cellsnp_lite, popscle]
   ref:
     type: object
