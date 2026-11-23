@@ -42,7 +42,9 @@ genotype wrangling lives here.
 
 Outputs are written under `results/<engine>/<platform>/<capture_id>/` so
 short- and long-read pileups of the same capture coexist and can be merged
-per cell downstream.
+per cell downstream. A non-default barcode set mirrors that layout under its
+own root, e.g. `results/empties/cellsnp/<platform>/<capture_id>/`, so it never
+nests inside the cells outputs (see *Soup pileups* below).
 
 A summary QC pass (`qc: true`, default) also writes per-capture and cohort
 coverage metrics as CSV under `results/qc/` — `cohort_metrics.csv` has one row per
@@ -102,6 +104,14 @@ cells and whose Gene Expression UMI total lies in `params.empties.umi_window`
 (`n_selected`, UMI quantiles, the window used). Everything about the empties set
 lives under `results/empties/` (and `logs/empties/`), never inside the cells
 output. The rule runs only when its outputs are requested.
+
+To pile up the soup, set `barcode_sets: [cells, empties]` (default `[cells]`).
+The `empties` set runs the **cellsnp engine only** (popscle and souporcell
+aren't needed for soup genotyping) over those barcodes, writing a normal
+cellSNP MEX to `results/empties/cellsnp/<platform>/<capture_id>/` (log:
+`logs/empties/cellsnp/<platform>/<capture_id>.log`). The `cells`
+outputs stay exactly where they were, so `snp_demux` and other consumers are
+unaffected.
 
 \* **Long-read (PacBio) note.** Full-length HiFi reads cover the whole transcript
 body, not just the 3′ end, so many more exonic somatic sites become observable —

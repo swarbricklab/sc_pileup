@@ -41,6 +41,16 @@ outs:
 # which lean on freemuxlet. Default keeps popscle pending team sign-off.
 engines: [cellsnp, popscle, souporcell]
 
+# -- Which barcode sets to pile up per capture -- #
+# cells   : the cell-called barcodes (captures.csv `barcodes`). Outputs stay at
+#           results/<engine>/<platform>/<capture_id>/ (what snp_demux reads).
+# empties : empty droplets ("soup"), selected per capture by select_empty_barcodes
+#           (needs a `raw_matrix` column; see params.empties). cellsnp ONLY --
+#           popscle/souporcell aren't needed for soup genotyping. Outputs go to
+#           results/empties/cellsnp/<platform>/<capture_id>/ (the cells layout
+#           under results/empties/, next to the selection in empties/selection/).
+barcode_sets: [cells]
+
 # -- QC summary metrics -- #
 # Additive, downstream-neutral: writes per-capture + cohort coverage metrics
 # (CSV) under <outs.root>/qc/. Set false to skip. See workflow/rules/qc.smk.

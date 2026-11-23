@@ -24,6 +24,39 @@ if _bad_engines:
         f"config.engines has unknown engine(s) {_bad_engines}; "
         f"valid engines: {sorted(_VALID_ENGINES)}"
     )
+# Barcode sets each capture is piled up over. `cells` (the cell-called
+# `barcodes` column) keeps today's paths; `empties` (empty droplets from
+# rules/empties.smk, for soup genotyping) runs cellsnp only. A non-default set S
+# mirrors the cells layout under its own root: results/S/<engine>/<platform>/
+# <capture_id>/ (empties: results/empties/cellsnp/...), never inside cells dirs.
+_VALID_BARCODE_SETS = {"cells", "empties"}
+barcode_sets = config.get("barcode_sets", ["cells"])
+_bad_sets = set(barcode_sets) - _VALID_BARCODE_SETS
+if _bad_sets:
+    raise ValueError(
+        "config.barcode_sets has unknown set(s) "
+        + str(sorted(_bad_sets))
+        + "; valid: "
+        + str(sorted(_VALID_BARCODE_SETS))
+    )
+if "empties" in barcode_sets:
+    if "cellsnp" not in engines:
+        raise ValueError(
+            "barcode_sets includes 'empties', which is piled up by the cellsnp "
+            "engine only; add 'cellsnp' to config.engines"
+        )
+    if "raw_matrix" not in captures.columns:
+        raise ValueError(
+            "barcode_sets includes 'empties' but captures.csv has no 'raw_matrix' "
+            "column (path to each capture's Cell Ranger raw_feature_bc_matrix/)"
+        )
+
+
+# capture_id is always one path component (keeps output patterns unambiguous).
+wildcard_constraints:
+    capture_id="[^/]+",
+
+
 _popscle_platforms = set(config["params"]["popscle"]["platforms"])
 _souporcell_platforms = set(config["params"].get("souporcell", {}).get("platforms", []))
 
@@ -110,6 +143,19 @@ def pileup_targets():
     targets = []
     for capture_id, row in captures.iterrows():
         plat = row["platform"]
+        if "empties" in barcode_sets:
+            targets.append(
+                str(
+                    out_dir
+                    / "empties"
+                    / "cellsnp"
+                    / plat
+                    / capture_id
+                    / "cellSNP.tag.AD.mtx"
+                )
+            )
+        if "cells" not in barcode_sets:
+            continue
         if "cellsnp" in engines:
             targets.append(
                 str(out_dir / "cellsnp" / plat / capture_id / "cellSNP.tag.AD.mtx")

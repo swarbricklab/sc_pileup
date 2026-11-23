@@ -28,6 +28,17 @@ properties:
     items:
       type: string
       enum: [cellsnp, popscle, souporcell]
+  barcode_sets:
+    type: array
+    description: >-
+      Barcode sets to pile up per capture. `cells` (default) keeps the existing
+      paths; `empties` (empty droplets, needs a raw_matrix column) runs cellsnp
+      only, into results/empties/cellsnp/<platform>/<capture_id>/.
+    items:
+      type: string
+      enum: [cells, empties]
+    minItems: 1
+    default: [cells]
   qc:
     type: boolean
     description: Whether to emit per-engine QC metrics.

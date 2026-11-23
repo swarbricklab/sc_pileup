@@ -374,7 +374,7 @@ def _empties_workdir(w, raw_col=True):
         sh(f"gzip -c {DATA / 'raw_matrix' / f} > {raw / (f + '.gz')}")
     with gzip.open(w.path("barcodes.tsv.gz"), "wt") as fh:
         fh.write("".join(c + "\n" for c in CELLS))
-    for f in ["pileup.bam", "sites.vcf.gz", "genome.fa"]:
+    for f in ["pileup.bam", "pileup.bam.bai", "sites.vcf.gz", "genome.fa", "genome.fa.fai"]:
         w.path(f).touch()
     row = dict(capture_id="cap1", platform="short", bam=w.path("pileup.bam"),
                barcodes=w.path("barcodes.tsv.gz"), raw_matrix=raw)
@@ -419,6 +419,72 @@ def test_empties_needs_raw_matrix_column(w):
     w.write_config()
     res = w.snakemake([w.out / "empties/selection/cap1/barcodes.tsv.gz"], dry=True, check=False)
     assert res.returncode != 0 and "no 'raw_matrix' column" in res.stdout + res.stderr
+
+
+# --------------------------------------------------------------------------- #
+# #20 barcode-set dimension (cells | empties)
+# --------------------------------------------------------------------------- #
+def _soup_bam(w, cbs):
+    """A BAM with one 50 bp read over chrT:100 per (barcode, base) pair. Reads
+    carry UR as well as UB: cellsnp-lite's --UMItag Auto reads UR."""
+    seq = ("ACGT" * 12 + "AC")
+    lines = ["@HD\tVN:1.6\tSO:coordinate", "@SQ\tSN:chrT\tLN:1000"]
+    for i, (cb, base) in enumerate(cbs):
+        sq = seq[:20] + base + seq[21:]
+        lines.append("\t".join([f"r{i}", "0", "chrT", "80", "255", "50M", "*", "0",
+                                 "0", sq, "I" * 50, f"CB:Z:{cb}",
+                                 f"UB:Z:u{i}", f"UR:Z:u{i}"]))
+    w.path("reads.sam").write_text("\n".join(lines) + "\n")
+    sh(f"samtools view -b -o {w.path('pileup.bam')} {w.path('reads.sam')}"
+       f" && samtools index {w.path('pileup.bam')}")
+
+
+def test_barcode_sets_empties(w):
+    _empties_workdir(w)
+    w.path("pileup.bam").unlink()
+    _soup_bam(w, [("AAAA-1", "A"), ("CCCC-1", "G"),       # cells
+                  ("TTTT-1", "G"), ("CACA-1", "A"),       # empties (selected)
+                  ("AGAG-1", "G")])                       # 101 UMIs: neither
+    w.bgzip_vcf(DATA / "read_sites.vcf", "sites.vcf.gz")
+    w.write_config({"barcode_sets": ["cells", "empties"]})
+    w.snakemake()
+    cells = w.out / "cellsnp/short/cap1"
+    emp = w.out / "empties/cellsnp/short/cap1"
+    # cells path unchanged; empties mirror it under empties/, nothing nested in cells
+    assert (cells / "cellSNP.tag.AD.mtx").exists() and (emp / "cellSNP.tag.AD.mtx").exists()
+    assert not any(p.is_dir() for p in cells.iterdir()), list(cells.iterdir())
+    assert (w.logs / "empties/cellsnp/short/cap1.log").exists()
+    selected = read_barcodes(w.out / "empties/selection/cap1/barcodes.tsv.gz")
+    samples = (emp / "cellSNP.samples.tsv").read_text().split()
+    assert samples == selected, (samples, selected)
+    assert (cells / "cellSNP.samples.tsv").read_text().split() == CELLS
+    assert mtx_total(emp / "cellSNP.tag.DP.mtx") == 2      # TTTT + CACA only
+    assert mtx_total(emp / "cellSNP.tag.AD.mtx") == 1
+    assert mtx_total(cells / "cellSNP.tag.DP.mtx") == 2
+
+
+def test_barcode_sets_default_dag(w):
+    _empties_workdir(w)
+    w.write_config({"engines": ["cellsnp", "popscle", "souporcell"]})
+    default = w.snakemake(dry=True).stdout
+    assert "empties" not in default
+    w.write_config({"engines": ["cellsnp", "popscle", "souporcell"],
+                    "barcode_sets": ["cells", "empties"]})
+    both = w.snakemake(dry=True).stdout
+    assert "cellsnp_pileup_empties" in both and "select_empty_barcodes" in both
+    # empties is cellsnp-only: no popscle / souporcell job touches it
+    assert "empties/cellsnp/short/cap1/cellSNP.tag.AD.mtx" in both
+    assert "empties/popscle" not in both and "empties/souporcell" not in both
+
+
+def test_barcode_sets_validation(w):
+    _empties_workdir(w)
+    w.write_config({"barcode_sets": ["cells", "soup"]})
+    res = w.snakemake(dry=True, check=False)
+    assert res.returncode != 0
+    w.write_config({"barcode_sets": ["empties"], "engines": ["popscle"]})
+    res = w.snakemake(dry=True, check=False)
+    assert res.returncode != 0 and "add 'cellsnp'" in res.stdout + res.stderr
 
 
 # --------------------------------------------------------------------------- #

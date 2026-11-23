@@ -40,6 +40,12 @@ set-resources:
     threads: 32
     mem: "32GB"
     runtime: 1440
+  # Soup pileup over the empty-droplet barcodes (barcode_sets: empties). Same
+  # BAM pass as cellsnp_pileup, more (but sparser) barcodes.
+  cellsnp_pileup_empties:
+    threads: 32
+    mem: "32GB"
+    runtime: 1440
   read_filter_bam:
     threads: 4
     mem: "8GB"
