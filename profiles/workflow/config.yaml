@@ -69,8 +69,21 @@ set-resources:
     threads: 1
     mem: "4GB"
     runtime: 480
+  # 16 threads and 32GB, kept for speed. In a cohort re-pile of 138 captures,
+  # vartrix kept a median of 41 per cent of these CPUs busy, for 1,935.6 SU.
+  # Two cheaper, slower settings were measured and can be swapped in when SU
+  # is tight. Both wrote identical ref.mtx, alt.mtx and barcodes.tsv. With
+  # `threads: 8`, which keeps 32GB at no extra charge, each job ran 1.2 to 1.6
+  # times longer on four of those captures, and a pass is projected at
+  # 1,279 SU. `threads: 4` needs `mem: "16GB"`, because 32GB on 4 CPUs is
+  # charged as 8; each job ran 1.6 to 3.1 times longer on six captures, for
+  # half the charge (50.9 against 100.4 SU), and a pass is projected at 936 SU.
+  # CPU time follows BAM size (about 210 CPU-s per GB, 2 to 3 times that on a
+  # 6-million-site panel) and not the threads, so the charge is 2 SU per CPU
+  # hour divided by the share of CPUs busy. Resident memory grows with CPU
+  # time, by 0.5 to 0.8 GB per CPU hour on the longer jobs, to 5.65 GB at most.
   souporcell_vartrix:
-    threads: 16
+    threads: 16  # cheaper and slower: 8, or 4 with mem "16GB" (see above)
     mem: "32GB"
     runtime: 720
   split_bam_by_chromosome:
