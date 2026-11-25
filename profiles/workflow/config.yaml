@@ -56,8 +56,10 @@ set-resources:
     runtime: 1440
   souporcell_covered_variants:
     threads: 1
-    mem: "16GB"
-    runtime: 360
+    # 16GB / 360 min ran out of walltime (at the memory cap) on 55-107 GB BAMs:
+    # `samtools depth -d 0` is a single-threaded whole-BAM pass.
+    mem: "64GB"
+    runtime: 1440
   souporcell_vartrix:
     threads: 16
     mem: "32GB"
