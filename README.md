@@ -135,7 +135,12 @@ short-read only for now.
 Each engine wraps a well-established single-cell genotyping tool, each run in its
 own focused container (public biocontainers / the souporcell image; see
 `config.yaml` `containers:`), pinned to the versions the original `Demuxafy.sif`
-shipped:
+shipped. The one exception is the souporcell engine's covered-variant scan, which
+runs in `containers.samtools_depth` (optional; samtools 1.22 by default) and
+writes the same records as souporcell's samtools 1.9 + bedtools pass. samtools
+1.15 gives the same output 11 to 38 times more slowly on panels of about
+200,000 sites and 13 per cent more slowly on a 6-million-site panel; 1.16 to
+1.21 were not timed:
 
 1. **cellSNP-lite** — the `cellsnp` engine; per-cell REF/ALT/OTH pileup at the
    site VCF. [docs](https://cellsnp-lite.readthedocs.io/) | [paper](https://doi.org/10.1093/bioinformatics/btab358) | [GitHub](https://github.com/single-cell-genetics/cellSNP-lite)
@@ -243,8 +248,11 @@ public fixture:
 
 Separately, fast **unit tests** cover individual rules on tiny synthetic fixtures
 built from the text files in `.tests/unit/data/`. They run Snakemake with the
-tools on `PATH` (snakemake 7.32, bcftools, samtools, cellsnp-lite, pandas,
-pyyaml), need no containers or real data, and run in GitHub CI (`ci.yml`):
+tools on `PATH` (snakemake 7.32, bcftools, samtools, htslib's `htsfile` and
+`bgzip`, cellsnp-lite, pandas, pyyaml), need no containers or real data, and
+run in GitHub CI (`ci.yml`). The test that compares the covered-variant scan
+with souporcell's `samtools depth` + `bedtools` pipe also needs bedtools, and
+is skipped without it:
 
 ```bash
 python .tests/unit/test_workflow.py            # all

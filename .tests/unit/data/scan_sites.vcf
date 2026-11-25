@@ -1,0 +1,21 @@
+##fileformat=VCFv4.2
+##contig=<ID=chrT,length=1000>
+##contig=<ID=chrU,length=1000>
+##bcftools_viewCommand=fixture
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chrT	1	pos_one	A	G	.	.	.
+chrT	100	s_own_in	A	G	.	.	.
+chrT	101	s_before_in	A	G	.	.	.
+chrT	101	del_one_run	ACG	A	.	.	.
+chrT	103	s_run_middle	A	C	.	.	.
+chrT	104	del_two_runs	ACGTCA	A	.	.	.
+chrT	104	del_three_runs	ACGTCAGTAC	A	.	.	.
+chrT	105	s_at_min	A	G	.	.	.
+chrT	106	s_gap	A	G	.	.	.
+chrT	106	gap_into_run	AC	A	.	.	.
+chrT	107	ins	A	AGGG	.	.	.
+chrT	109	mnv	AC	GT	.	.	.
+chrT	110	s_at_max	A	G	.	.	.
+chrT	111	s_below_min	A	G	.	.	.
+chrT	112	multi	G	T,C	.	.	.
+chrU	101	other_contig	A	G	.	.	.

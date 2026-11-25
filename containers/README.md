@@ -2,12 +2,17 @@
 
 sc_pileup replaced the monolithic `Demuxafy.sif` with focused, pinned containers
 (see `config.yaml` → `containers:`). Versions match what `Demuxafy.sif` shipped so
-results are unchanged.
+results are unchanged. The one newer tool is `samtools_depth`, samtools 1.22 for
+the covered-variant scan, which writes the same records as souporcell's samtools
+1.9 + bedtools pass. samtools 1.15 gives that output 11 to 38 times more slowly
+on panels of about 200,000 sites and 13 per cent more slowly on a 6-million-site
+panel; 1.16 to 1.21 were not timed.
 
 | logical name | image | source |
 |---|---|---|
 | `cellsnp`    | `quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3` | public biocontainer |
 | `samtools`   | `quay.io/biocontainers/samtools:1.15--h1170115_1`      | public biocontainer |
+| `samtools_depth` | `quay.io/biocontainers/samtools:1.22--h96c455f_0`  | public biocontainer; optional key for the covered-variant scan only, with this image as the default in `workflow/rules/common.smk` |
 | `bcftools`   | `quay.io/biocontainers/bcftools:1.13--h3a49de5_0`       | public biocontainer |
 | `souporcell` | `cumulusprod/souporcell:2.5`                            | Docker Hub (minimap2 + renamer/retag + samtools/bcftools/bedtools + vartrix) |
 | `popscle`    | `ghcr.io/swarbricklab/sc_pileup-popscle:da70fc78`      | **built here** (`popscle/Dockerfile`) |

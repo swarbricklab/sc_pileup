@@ -8,10 +8,13 @@
 # --common_variants path). The cluster count k and any cluster->donor mapping
 # (--known_genotypes) stay in snp_demux.
 #
-# Commands are lifted verbatim from souporcell_pipeline.py (renamer -> minimap2
-# -> retag -> covered-variant depth filter -> vartrix); the whole engine runs in
-# cumulusprod/souporcell:2.5, which carries minimap2, renamer/retag, samtools,
-# bcftools, bedtools and vartrix.
+# The steps are those of souporcell_pipeline.py (renamer -> minimap2 -> retag ->
+# covered-variant depth filter -> vartrix). The remap and vartrix commands are
+# lifted verbatim and run in cumulusprod/souporcell:2.5, which carries minimap2,
+# renamer/retag, samtools and vartrix. The covered-variant filter runs in
+# containers.samtools_depth, samtools 1.22 by default (scripts/covered_variants.sh):
+# it keeps the records souporcell's samtools depth + bedtools pass keeps, reading
+# depth only at the positions the site VCF is tested at.
 #
 # v1 is whole-BAM. minimap2 remap is not cleanly chromosome-splittable (reads
 # relocate genome-wide); the depth+vartrix half is, and is deferred to v1.1.
@@ -98,37 +101,29 @@ rule souporcell_covered_variants:
         bai=souporcell_bai,
         vcf=sites_vcf_input,
         site_check=site_check_input,
+        script=str(Path(workflow.basedir) / "scripts/covered_variants.sh"),
     output:
         vcf=temp(out_dir / "souporcell/{platform}/{capture_id}/covered_variants.vcf"),
     log:
         logs / "souporcell/{platform}/{capture_id}/covered_variants.log",
     container:
-        config["containers"]["souporcell"]
+        # containers.samtools_depth, or samtools 1.22 when the config has no such
+        # key (rules/common.smk). samtools 1.15 gives the same output more slowly:
+        # 11 to 38 times on panels of about 200,000 sites, 13 per cent on a
+        # 6-million-site panel (see the script).
+        SAMTOOLS_DEPTH_CONTAINER
     params:
         min_cov=config["params"]["souporcell"]["min_cov"],
         max_cov=config["params"]["souporcell"]["max_cov"],
     shell:
-        # Keep only sites with min_cov <= read depth < max_cov on the bam, then
-        # subset sites_vcf to those covered regions (mirrors souporcell). awk
-        # form matches souporcell's ($2, $2+1) bed convention.
-        # `-d 0`: samtools 1.9 (this image) caps `depth` by default, so very deep
-        # sites (e.g. IG/HLA loci at >600k reads) report a few hundred and slip
-        # under max_cov, and capped values can also fall below min_cov. `-d 0`
-        # reports true depth (= samtools >=1.13 default).
-        r"""
-        d=$(dirname {output.vcf})
-        samtools depth -d 0 {input.bam} \
-            | awk -v lo={params.min_cov} -v hi={params.max_cov} '{{ if ($3 >= lo && $3 < hi) print $1"\t"$2"\t"($2+1)"\t"$3 }}' \
-            | bedtools merge -i - >$d/depth_merged.bed 2>{log}
-        # strip bcftools' own `##bcftools_viewCommand=...; Date=...` header line so
-        # variants.vcf is byte-reproducible (the Date varies per run); records are
-        # unchanged.
-        (
-            bcftools view -h {input.vcf} | grep -v '^##bcftools_'
-            bedtools intersect -wa -a {input.vcf} -b $d/depth_merged.bed
-        ) \
-            >{output.vcf} 2>>{log}
-        rm -f $d/depth_merged.bed
+        # Keep the sites_vcf records whose tested positions hold
+        # min_cov <= read depth < max_cov, as souporcell does, asking samtools
+        # for the depth at those positions only. Same header, records and order
+        # as souporcell's whole-BAM `samtools depth | bedtools merge | bedtools
+        # intersect` pipe; see scripts/covered_variants.sh.
+        """
+        bash {input.script} {input.bam} {input.vcf} {params.min_cov} \
+            {params.max_cov} {output.vcf} 2>{log}
         """
 
 

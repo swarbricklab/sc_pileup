@@ -1,0 +1,14 @@
+@HD	VN:1.6	SO:coordinate
+@SQ	SN:chrT	LN:1000
+a1	0	chrT	100	60	5M	*	0	0	ACGTA	IIIII
+a2	0	chrT	100	60	5M	*	0	0	ACGTA	IIIII
+b1	0	chrT	106	60	3M	*	0	0	ACG	III
+b2	0	chrT	106	60	3M	*	0	0	ACG	III
+b3	0	chrT	106	60	3M	*	0	0	ACG	III
+c1	0	chrT	109	60	1M	*	0	0	A	I
+c2	0	chrT	109	60	1M	*	0	0	A	I
+c3	0	chrT	109	60	1M	*	0	0	A	I
+c4	0	chrT	109	60	1M	*	0	0	A	I
+d1	0	chrT	110	60	1M	*	0	0	C	I
+e1	0	chrT	111	60	2M	*	0	0	GT	II
+e2	0	chrT	111	60	2M	*	0	0	GT	II

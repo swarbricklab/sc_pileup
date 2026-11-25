@@ -4,7 +4,8 @@
 Each test builds tiny synthetic fixtures (from the text files in data/) in a
 scratch directory, writes a config, and runs Snakemake on specific targets with
 the tools on PATH (no containers). Needs: snakemake 7.32, bcftools, samtools,
-cellsnp-lite, pandas, pyyaml.
+htslib (htsfile, bgzip), cellsnp-lite, pandas, pyyaml. bedtools is optional:
+without it the old-pipe comparison of the covered-variant scan is skipped.
 
 Usage (from the repo root):
     python .tests/unit/test_workflow.py            # all tests
@@ -12,6 +13,8 @@ Usage (from the repo root):
 """
 import copy
 import gzip
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -91,7 +94,7 @@ class Workdir:
             (d / "config.yaml").write_text(yaml.safe_dump(prof, sort_keys=False))
         return d
 
-    def snakemake(self, targets=(), dry=False, check=True):
+    def snakemake(self, targets=(), dry=False, check=True, extra=(), env=None):
         cmd = [
             "snakemake", "--snakefile", str(REPO / "workflow/Snakefile"),
             "--configfile", str(self.path("config.yaml")),
@@ -101,11 +104,16 @@ class Workdir:
         ]
         if dry:
             cmd.append("-n")
+        cmd += list(extra)
         cmd += [str(t) for t in targets]
-        res = subprocess.run(cmd, text=True, capture_output=True)
+        res = subprocess.run(cmd, text=True, capture_output=True, env=env)
         if check and res.returncode != 0:
             raise AssertionError("snakemake failed:\n" + res.stdout + res.stderr)
         return res
+
+
+class Skip(Exception):
+    """Raised by a test that cannot run here (a tool is missing)."""
 
 
 def read_tsv(path):
@@ -530,22 +538,180 @@ def test_qc_empties_row(w):
 
 
 # --------------------------------------------------------------------------- #
+# souporcell covered-variant scan (scripts/covered_variants.sh)
+# --------------------------------------------------------------------------- #
+# data/scan_reads.sam gives chrT these read depths (0 everywhere else):
+#   100-104: 2 | 105: 0 | 106-108: 3 | 109: 4 | 110: 1 | 111-112: 2
+# With min_cov 2 and max_cov 4, the in-range runs are 100-104, 106-108 and
+# 111-112. A record at POS with a REF of length L is tested at depth positions
+# POS-1 .. POS+L-2 and written once for each in-range run among them. Some
+# records of data/scan_sites.vcf:
+#   s_own_in (POS 100) is tested at 99, depth 0: dropped
+#   s_before_in (101) is tested at 100, depth 2: kept
+#   del_two_runs (104, 6 bases) is tested at 103-108, two runs: written twice
+#   del_three_runs (104, 10 bases) is tested at 103-112, three runs: three times
+#   s_at_min (105) is tested at 104, depth 2: kept
+#   s_at_max (110) is tested at 109, depth 4: dropped
+#   s_below_min (111) is tested at 110, depth 1: dropped
+#   pos_one (1) is tested at no position, and chrU has no reads: both dropped
+SCAN_KEPT = ["s_before_in", "del_one_run", "s_run_middle",
+             "del_two_runs", "del_two_runs",
+             "del_three_runs", "del_three_runs", "del_three_runs",
+             "s_at_min", "gap_into_run", "ins", "mnv", "multi"]
+SCAN_OUT = "souporcell/short/cap1/covered_variants.vcf"
+
+# The rule's shell before scripts/covered_variants.sh (souporcell's whole-BAM
+# pipe), with @BAM@, @VCF@, @LO@, @HI@, @BED@ and @OUT@ for its inputs.
+OLD_SCAN = r"""
+samtools depth -d 0 @BAM@ \
+    | awk -v lo=@LO@ -v hi=@HI@ '{ if ($3 >= lo && $3 < hi) print $1"\t"$2"\t"($2+1)"\t"$3 }' \
+    | bedtools merge -i - >@BED@
+(
+    bcftools view -h @VCF@ | grep -v '^##bcftools_'
+    bedtools intersect -wa -a @VCF@ -b @BED@
+) >@OUT@
+"""
+
+
+def _scan_workdir(w):
+    sh(f"samtools view -b -o {w.path('pileup.bam')} {DATA / 'scan_reads.sam'}"
+       f" && samtools index {w.path('pileup.bam')}")
+    for f in ["barcodes.tsv.gz", "genome.fa"]:
+        w.path(f).touch()
+    w.write_captures([dict(capture_id="cap1", platform="short",
+                           bam=w.path("pileup.bam"),
+                           barcodes=w.path("barcodes.tsv.gz"))],
+                     ["capture_id", "platform", "bam", "barcodes"])
+
+
+def _scan(w, sites, check=True):
+    """Run souporcell_covered_variants on `sites` (min_cov 2, max_cov 4)."""
+    w.write_config({"engines": ["souporcell"],
+                    "params": {"souporcell": {"min_cov": 2, "max_cov": 4}}},
+                   sites=sites)
+    out = w.out / SCAN_OUT
+    if out.exists():
+        out.unlink()
+    res = w.snakemake([out], check=check)
+    return out, res
+
+
+def _vcf_parts(path):
+    lines = Path(path).read_text().splitlines()
+    header = [ln for ln in lines if ln.startswith("#")]
+    ids = [ln.split("\t")[2] for ln in lines if not ln.startswith("#")]
+    return header, ids
+
+
+def test_covered_variants_records(w):
+    _scan_workdir(w)
+    sites = w.bgzip_vcf(DATA / "scan_sites.vcf", "sites.vcf.gz")
+    out, _ = _scan(w, sites)
+    header, ids = _vcf_parts(out)
+    assert ids == SCAN_KEPT, ids
+    assert not [h for h in header if h.startswith("##bcftools_")], header
+
+
+def test_covered_variants_plain_vcf(w):
+    _scan_workdir(w)
+    sites = w.path("sites.vcf")
+    shutil.copy(DATA / "scan_sites.vcf", sites)
+    out, _ = _scan(w, sites)
+    header, ids = _vcf_parts(out)
+    assert ids == SCAN_KEPT, ids
+    # htslib's header: PASS line added, the ##bcftools_ line dropped
+    want = sh(f"bcftools view -h {sites} | grep -v '^##bcftools_'").stdout
+    assert header == want.splitlines(), (header, want)
+    assert '##FILTER=<ID=PASS,Description="All filters passed">' in header
+
+
+def test_covered_variants_matches_old_pipe(w):
+    if not shutil.which("bedtools"):
+        raise Skip("bedtools is not on PATH")
+    _scan_workdir(w)
+    gz = w.bgzip_vcf(DATA / "scan_sites.vcf", "sites.vcf.gz")
+    plain = w.path("sites.vcf")
+    shutil.copy(DATA / "scan_sites.vcf", plain)
+    for sites in (gz, plain):
+        want = w.path(sites.name + ".old_pipe.vcf")
+        cmd = OLD_SCAN
+        for k, v in [("@BAM@", w.path("pileup.bam")), ("@VCF@", sites),
+                     ("@LO@", 2), ("@HI@", 4), ("@OUT@", want),
+                     ("@BED@", w.path("depth_merged.bed"))]:
+            cmd = cmd.replace(k, str(v))
+        subprocess.run(["bash", "-c", "set -euo pipefail\n" + cmd], check=True,
+                       text=True, capture_output=True)
+        out, _ = _scan(w, sites)
+        assert out.read_bytes() == want.read_bytes(), (
+            sites.name, out.read_text(), want.read_text())
+
+
+def test_scan_container_default_and_override(w):
+    # The scan runs in containers.samtools_depth, or in samtools 1.22 when the
+    # config has no such key; split_bam_by_chromosome keeps containers.samtools.
+    # A dry run with --use-singularity names the image each requested job would
+    # pull. A stand-in `singularity` that only reports a version lets that dry
+    # run work where singularity is not installed.
+    _scan_workdir(w)
+    w.path("sites.vcf.gz").touch()
+    shim = w.path("bin")
+    shim.mkdir()
+    (shim / "singularity").write_text("#!/bin/sh\necho 'singularity version 3.8.0'\n")
+    (shim / "singularity").chmod(0o755)
+    env = dict(os.environ, PATH=str(shim) + os.pathsep + os.environ["PATH"])
+    sing = ["--use-singularity", "--singularity-prefix", str(w.path("images"))]
+
+    def images(target):
+        res = w.snakemake([target], dry=True, extra=sing, env=env)
+        return re.findall(r"Singularity image (\S+) will be pulled", res.stdout + res.stderr)
+
+    scan = w.out / SCAN_OUT
+    split = w.out / "popscle/short/cap1/split/chr1.bam"
+    default = "docker://quay.io/biocontainers/samtools:1.22--h96c455f_0"
+    shared = BASE_CONFIG["containers"]["samtools"]
+    assert "samtools_depth" not in BASE_CONFIG["containers"]
+    w.write_config({"engines": ["souporcell"]})
+    assert images(scan) == [default], images(scan)
+    assert images(split) == [shared], images(split)
+    other = "docker://example.org/samtools:test"
+    w.write_config({"engines": ["souporcell"],
+                    "containers": {"samtools_depth": other}})
+    assert images(scan) == [other], images(scan)
+    assert images(split) == [shared], images(split)
+
+
+def test_covered_variants_symbolic_alt_fails(w):
+    _scan_workdir(w)
+    sites = w.path("sites.vcf")
+    shutil.copy(DATA / "scan_symbolic.vcf", sites)
+    _, res = _scan(w, sites, check=False)
+    assert res.returncode != 0, "the scan should refuse a symbolic ALT"
+    log = (w.logs / "souporcell/short/cap1/covered_variants.log").read_text()
+    assert "symbolic ALT or POS < 1" in log, log
+
+
+# --------------------------------------------------------------------------- #
 def main(argv):
     pattern = argv[1] if len(argv) > 1 else ""
     tests = [(n, f) for n, f in sorted(globals().items())
              if n.startswith("test_") and callable(f) and pattern in n]
-    failed = []
+    failed, skipped = [], []
     for name, fn in tests:
         tmp = Path(tempfile.mkdtemp(prefix="sc_pileup_unit_"))
         try:
             fn(Workdir(tmp))
             print("PASS", name)
             shutil.rmtree(tmp, ignore_errors=True)
+        except Skip as why:
+            skipped.append(name)
+            print("SKIP", name, f"({why})")
+            shutil.rmtree(tmp, ignore_errors=True)
         except Exception:
             failed.append(name)
             print("FAIL", name, "(scratch kept at", str(tmp) + ")")
             traceback.print_exc()
-    print(f"\n{len(tests) - len(failed)}/{len(tests)} passed")
+    passed = len(tests) - len(failed) - len(skipped)
+    print(f"\n{passed}/{len(tests)} passed, {len(skipped)} skipped")
     return 1 if failed else 0
 
 

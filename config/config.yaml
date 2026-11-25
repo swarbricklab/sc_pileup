@@ -185,16 +185,24 @@ ref:
 # -- Containers -- #
 # Focused per-tool images (public biocontainers / Docker Hub) replacing the
 # monolithic Demuxafy.sif. Versions match what Demuxafy.sif shipped so results are
-# unchanged. Snakemake pulls docker:// images once into its singularity prefix.
+# unchanged, except samtools_depth (below), which writes the same records with a
+# newer samtools. Snakemake pulls docker:// images once into its singularity prefix.
 containers:
   cellsnp:    docker://quay.io/biocontainers/cellsnp-lite:1.2.2--hb0d9459_3
   # built from statgen/popscle @ da70fc78 (the commit Demuxafy.sif shipped); the
   # public 0.1beta biocontainer emits a different pileup.umi format. See containers/.
   popscle:    docker://ghcr.io/swarbricklab/sc_pileup-popscle:da70fc78
   samtools:   docker://quay.io/biocontainers/samtools:1.15--h1170115_1
+  # Optional. The covered-variant scan (souporcell_covered_variants) only, which
+  # has its own image because samtools 1.15 gives its output 11 to 38 times more
+  # slowly than 1.22 on panels of about 200,000 sites (13 per cent more slowly
+  # on a 6-million-site panel; 1.16 to 1.21 not timed). split_bam_by_chromosome
+  # and read_filter_bam keep `samtools`. Without this key the scan uses this
+  # same 1.22 image (rules/common.smk).
+  samtools_depth: docker://quay.io/biocontainers/samtools:1.22--h96c455f_0
   bcftools:   docker://quay.io/biocontainers/bcftools:1.13--h3a49de5_0
-  # The whole souporcell engine (minimap2 remap + renamer/retag, samtools/bcftools
-  # covered-variant filter, and vartrix) runs in souporcell's own image — it
-  # carries all of them, and its vartrix is the one snp_demux pins (Demuxafy's
-  # bundled vartrix panics intermittently).
+  # The souporcell remap (minimap2 + renamer/retag) and vartrix run in
+  # souporcell's own image. It carries them, and its vartrix is the one
+  # snp_demux pins (Demuxafy's bundled vartrix panics intermittently). The
+  # covered-variant filter runs in samtools_depth.
   souporcell: docker://cumulusprod/souporcell:2.5
