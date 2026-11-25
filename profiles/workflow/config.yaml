@@ -36,14 +36,26 @@ conda-frontend: mamba
 # snakemake 7.32.4 set-threads does not propagate to the {threads} placeholder
 # for a rule that declares no threads directive; the resources route does.
 set-resources:
+  # 32 threads, kept for speed. In a cohort re-pile of 138 captures,
+  # cellsnp-lite kept a median of 44 per cent of these CPUs busy, for 682.7 SU.
+  # Two cheaper, slower settings were measured and can be swapped in when SU
+  # is tight. Both keep 32GB, which 8 CPUs carry at no extra charge, and both
+  # wrote identical files. With `threads: 16` each job ran 1.2 to 1.9 times
+  # longer on four of those captures, and a pass is projected at 498 SU; it
+  # saves little where 32 threads were already half busy. With `threads: 8`
+  # each job ran 1.7 to 3.1 times longer on six captures, for 27 per cent less
+  # charge (32.6 against 44.7 SU), and a pass is projected at 418 SU.
+  # CPU time follows BAM size (about 60 CPU-s per GB, about 10 times that on a
+  # 6-million-site panel) and not the threads. Resident memory stays under 1 GB.
   cellsnp_pileup:
-    threads: 32
+    threads: 32  # cheaper and slower: 16 or 8 (see above)
     mem: "32GB"
     runtime: 1440
   # Soup pileup over the empty-droplet barcodes (barcode_sets: empties). Same
-  # BAM pass as cellsnp_pileup, more (but sparser) barcodes.
+  # BAM pass as cellsnp_pileup, more (but sparser) barcodes. The cheaper
+  # settings above were not timed on this rule.
   cellsnp_pileup_empties:
-    threads: 32
+    threads: 32  # cheaper and slower: 16 or 8, as for cellsnp_pileup
     mem: "32GB"
     runtime: 1440
   read_filter_bam:
