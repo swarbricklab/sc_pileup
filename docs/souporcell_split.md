@@ -34,7 +34,7 @@ So the boundary is clean:
 | stage | module | notes |
 |---|---|---|
 | renamer → minimap2 → retag → sort | **sc_pileup** | the remap (ref-bias correction) |
-| covered-variant filter | **sc_pileup** | samtools depth × bedtools intersect on the *remapped* bam |
+| covered-variant filter | **sc_pileup** | the records souporcell's samtools depth × bedtools intersect keeps, found with `samtools depth -b` at the sites only |
 | vartrix → `ref.mtx`/`alt.mtx` | **sc_pileup** | + `barcodes.tsv`, `variants.vcf` kept alongside |
 | `souporcell` clustering (`-k`) | **snp_demux** | needs #donors |
 | troublet, consensus | **snp_demux** | doublets, cluster→donor, ambient |
@@ -57,7 +57,15 @@ coherent, non-`temp()` product.
 - **renamer**: `renamer.py --bam BAM --barcodes BC --out reads.fq --no_umi False --umi_tag UB --cell_tag CB`
 - **minimap2**: `minimap2 -ax splice -t N -G50k -k 21 -w 11 --sr -A2 -B8 -O12,32 -E2,1 -r200 -p.5 -N20 -f1000,5000 -n2 -m20 -s40 -g2000 -2K50m --secondary=no FASTA reads.fq > minimap.sam`
 - **retag**: `retag.py --sam minimap.sam --no_umi False --umi_tag UB --cell_tag CB --out tagged.bam` → `samtools sort`+`index`
-- **covered variants** (on the *remapped* bam): `samtools depth -d 0` (uncapped) → keep `min_cov ≤ depth < max_cov` → `bedtools merge` → `bedtools intersect -wa -a sites_vcf -b covered.bed` (prepend the VCF header)
+- **covered variants** (on the *remapped* bam): `samtools depth -d 0` (uncapped) → keep `min_cov ≤ depth < max_cov` → `bedtools merge` → `bedtools intersect -wa -a sites_vcf -b covered.bed` (prepend the VCF header).
+  sc_pileup writes the same header and records in the same order with
+  `workflow/scripts/covered_variants.sh`, which asks `samtools depth -b` for
+  the depth at the positions each record is tested at, instead of listing the
+  depth of every covered base of the BAM. It runs in `containers.samtools_depth`
+  (optional; samtools 1.22 by default). As in souporcell, a record at `POS`
+  with a REF of length `L` is tested at depth positions `POS-1 .. POS+L-2`,
+  one base before itself, and is written once for each run of consecutive
+  in-range positions among them.
 - **vartrix**: `vartrix --mapq 30 -b remapped_sorted.bam -c barcodes.tsv --scoring-method coverage --threads N --ref-matrix ref.mtx --out-matrix alt.mtx -v covered.vcf --fasta FASTA --umi`
 
 ## Chromosome-split optimisation — partial

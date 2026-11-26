@@ -153,6 +153,8 @@ properties:
       cellsnp: {type: string}
       popscle: {type: string}
       samtools: {type: string}
+      # optional; default in rules/common.smk (SAMTOOLS_DEPTH_CONTAINER)
+      samtools_depth: {type: string}
       bcftools: {type: string}
       souporcell: {type: string}
     required: [cellsnp, popscle, samtools, bcftools, souporcell]

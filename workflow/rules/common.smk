@@ -60,6 +60,15 @@ wildcard_constraints:
 _popscle_platforms = set(config["params"]["popscle"]["platforms"])
 _souporcell_platforms = set(config["params"].get("souporcell", {}).get("platforms", []))
 
+# Image for the covered-variant scan (souporcell_covered_variants) only. The scan
+# has its own optional key because samtools 1.15 gives its output 11 to 38 times
+# more slowly than 1.22 on panels of about 200,000 sites (scripts/covered_variants.sh);
+# split_bam_by_chromosome and read_filter_bam keep containers.samtools. A config
+# without the key gets samtools 1.22.
+SAMTOOLS_DEPTH_CONTAINER = config["containers"].get(
+    "samtools_depth", "docker://quay.io/biocontainers/samtools:1.22--h96c455f_0"
+)
+
 
 def lookup(field):
     """Return captures[field] for the wildcard capture_id."""

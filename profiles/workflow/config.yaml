@@ -54,12 +54,21 @@ set-resources:
     threads: 32
     mem: "128GB"
     runtime: 1440
+  # One BAM pass of `samtools depth -b` at the positions the site VCF is tested
+  # at (scripts/covered_variants.sh), in containers.samtools_depth (samtools
+  # 1.22 by default). On 1.22 its CPU time follows BAM size, from 40 CPU-s on a
+  # 1.5 GB BAM to 937 on a 145 GB one (about 6.5 more per GB), and a
+  # 6-million-site panel adds about 70 CPU-s. The job keeps its one CPU busy
+  # and peaks at 105 MB. 4GB is within what one CPU carries at no extra charge,
+  # so the job is charged for one CPU over its walltime. samtools 1.15 gives
+  # the same output 11 to 38 times more slowly on panels of about 200,000 sites
+  # and 13 per cent more slowly on a 6-million-site panel; 1.16 to 1.21 were
+  # not timed. 480 min leaves room for an older samtools, whose time on the
+  # largest BAMs was not measured; walltime that is not used is not charged.
   souporcell_covered_variants:
     threads: 1
-    # 16GB / 360 min ran out of walltime (at the memory cap) on 55-107 GB BAMs:
-    # `samtools depth -d 0` is a single-threaded whole-BAM pass.
-    mem: "64GB"
-    runtime: 1440
+    mem: "4GB"
+    runtime: 480
   souporcell_vartrix:
     threads: 16
     mem: "32GB"
