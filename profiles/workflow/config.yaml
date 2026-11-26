@@ -35,6 +35,20 @@ conda-frontend: mamba
 # NB: set as a `threads` *resource* (not snakemake's `set-threads:`) because in
 # snakemake 7.32.4 set-threads does not propagate to the {threads} placeholder
 # for a rule that declares no threads directive; the resources route does.
+#
+# Queue: the four heavy pileup rules (both cellsnp rules, the souporcell
+# covered-variant scan and vartrix) set `queue: normalsr`, which the global
+# profile's pbs_submit.py passes to qsub -q; every other rule goes to normal.
+# normalsr has newer CPUs and charges the same 2 SU per CPU-hour as normal.
+# Two captures, run on both queues at the same time with cellsnp-lite on 32
+# threads and vartrix on 16, wrote identical output, and their cellsnp-lite,
+# scan and vartrix jobs cost 13, 15 and 22 per cent less on normalsr (19 per
+# cent over the three rules). Every job started within two minutes on either
+# queue.
+# One earlier test job failed once at container start (retries: 2 covers
+# that). The queue is set per rule, not under default-resources, which would
+# replace the global profile's whole default list. normalsr is a queue of NCI
+# Gadi; a profile for another cluster sets its own queue or drops the key.
 set-resources:
   # 32 threads, kept for speed. In a cohort re-pile of 138 captures,
   # cellsnp-lite kept a median of 44 per cent of these CPUs busy, for 682.7 SU.
@@ -51,6 +65,7 @@ set-resources:
     threads: 32  # cheaper and slower: 16 or 8 (see above)
     mem: "32GB"
     runtime: 1440
+    queue: normalsr
   # Soup pileup over the empty-droplet barcodes (barcode_sets: empties). Same
   # BAM pass as cellsnp_pileup, more (but sparser) barcodes. The cheaper
   # settings above were not timed on this rule.
@@ -58,6 +73,7 @@ set-resources:
     threads: 32  # cheaper and slower: 16 or 8, as for cellsnp_pileup
     mem: "32GB"
     runtime: 1440
+    queue: normalsr
   read_filter_bam:
     threads: 4
     mem: "8GB"
@@ -81,6 +97,7 @@ set-resources:
     threads: 1
     mem: "4GB"
     runtime: 480
+    queue: normalsr
   # 16 threads and 32GB, kept for speed. In a cohort re-pile of 138 captures,
   # vartrix kept a median of 41 per cent of these CPUs busy, for 1,935.6 SU.
   # Two cheaper, slower settings were measured and can be swapped in when SU
@@ -98,6 +115,7 @@ set-resources:
     threads: 16  # cheaper and slower: 8, or 4 with mem "16GB" (see above)
     mem: "32GB"
     runtime: 720
+    queue: normalsr
   split_bam_by_chromosome:
     threads: 1
     mem: "2GB"
