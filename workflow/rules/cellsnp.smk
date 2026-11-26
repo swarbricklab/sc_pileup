@@ -42,6 +42,15 @@ rule cellsnp_pileup:
         min_len=cellsnp_platform_param("min_len"),
         extra=cellsnp_extra,
     shell:
+        # --cellTAG CB, --UMItag UR and --maxDEPTH 0 are cellsnp-lite 1.2.2's own
+        # defaults with a barcode list (--UMItag Auto means UR, the raw UMI),
+        # passed explicitly to guard the UMI tag: cellsnp-lite 1.2.3 switches
+        # that default to UB. --exclFLAG is left to cellsnp-lite, which derives
+        # it from the UMI mode (duplicate-flagged reads are excluded only when no
+        # UMI tag is used). Later releases also change how --maxDEPTH and
+        # --maxPILEUP cap the pileup, so a version bump still needs a pileup
+        # comparison at deep sites. platform_args ({params.extra}) come last on
+        # the line, so a flag there, such as --UMItag UB, overrides these.
         """
         outdir=$(dirname {output.base})
         cellsnp-lite --samFile {input.bam} \
@@ -49,6 +58,9 @@ rule cellsnp_pileup:
             --barcodeFile {input.barcodes} \
             --outDir $outdir \
             --nproc {resources.threads} \
+            --cellTAG CB \
+            --UMItag UR \
+            --maxDEPTH 0 \
             --minMAF {params.minMAF} \
             --minCOUNT {params.minCOUNT} \
             --minMAPQ {params.min_mapq} \

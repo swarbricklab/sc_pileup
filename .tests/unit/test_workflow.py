@@ -351,6 +351,25 @@ def test_platform_params_rejects_unknown_platform(w):
     assert res.returncode != 0 and "shrot" in out, out
 
 
+def test_cellsnp_pins_read_admission(w):
+    # cellsnp-lite 1.2.2's cell tag, UMI tag and depth cap are on the command
+    # line; --exclFLAG is not, so cellsnp-lite still derives it from the UMI
+    # mode. platform_args come after them, so a flag there (here --UMItag UB)
+    # wins.
+    _mixed_platform_workdir(w)
+    w.write_config({"params": {"cellsnp_lite": {"platform_args": {
+        "short": "--UMItag UB", "long": ""}}}})
+    cmds = _cellsnp_cmds(w.snakemake(dry=True).stdout)
+    pinned = "--cellTAG CB --UMItag UR --maxDEPTH 0"
+    for cmd in cmds.values():
+        assert pinned in cmd, cmd
+        assert "--exclFLAG" not in cmd, cmd
+    short = cmds["s.bam"]
+    assert "--gzip --UMItag UB" in short, short
+    assert short.index("--UMItag UR") < short.index("--UMItag UB"), short
+    assert "--UMItag UB" not in cmds["l.bam"], cmds["l.bam"]
+
+
 def test_shipped_config_long_placeholder(w):
     # the repo's config/config.yaml long-read placeholder is what long jobs get
     shipped = yaml.safe_load((REPO / "config/config.yaml").read_text())

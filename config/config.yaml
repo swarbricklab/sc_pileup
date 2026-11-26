@@ -122,7 +122,13 @@ params:
       long:
         min_mapq: 20
         min_len: 100
-    # Per-platform extra cellsnp-lite flags. Defaults assume 10x CB/UB tags.
+    # Per-platform extra cellsnp-lite flags. They come last on the command line,
+    # after the flags the rule pins (rules/cellsnp.smk), so a flag here overrides
+    # those. The rule counts raw UMIs (--UMItag UR, cellsnp-lite 1.2.2's default
+    # with a barcode list); `--UMItag UB` here counts Cell Ranger's corrected
+    # UMIs instead, which changes the counts. cellsnp-lite derives --exclFLAG
+    # from the UMI mode, so `--UMItag None` here also excludes duplicate-flagged
+    # reads, as it did before the rule pinned the UMI tag.
     # The `long` row is a documented placeholder to be tuned against real PacBio
     # single-cell BAMs (splice-aware; UMI semantics may differ; see docs).
     platform_args:
